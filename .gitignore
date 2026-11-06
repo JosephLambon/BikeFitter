@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# Claude Code: personal, machine-specific settings.
+# Shared project skills in .claude/skills/ are committed.
+.claude/settings.local.json

@@ -1,0 +1,35 @@
+name: Branch policy
+
+# Required status check on main and develop (set in GitHub branch protection).
+# - Pull requests into main must come from develop in this repository.
+# - Pull requests into develop may come from any branch.
+# Branch protection separately blocks direct pushes to both branches, and
+# requires a branch to be up to date with its target before it can merge.
+
+on:
+  pull_request:
+    branches: [main, develop]
+    # "edited" re-runs the check when a pull request is retargeted.
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  branch-policy:
+    name: branch-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the source branch
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          if [ "$BASE_REF" = "main" ]; then
+            if [ "$HEAD_REPO" != "$THIS_REPO" ] || [ "$HEAD_REF" != "develop" ]; then
+              echo "::error::Only develop can be merged into main. This pull request is from $HEAD_REPO:$HEAD_REF."
+              exit 1
+            fi
+          fi
+          echo "OK: $HEAD_REPO:$HEAD_REF -> $BASE_REF"
