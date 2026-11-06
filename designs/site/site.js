@@ -27,7 +27,7 @@
     workstand: {
       name: 'Workstand',
       line: 'A tidy workshop: every tool has its place and its own colour.',
-      fonts: ['Geist + Geist Mono', 'Plus Jakarta Sans + JetBrains Mono', 'Figtree + DM Mono'],
+      fonts: ['Plus Jakarta Sans + JetBrains Mono', 'Geist + Geist Mono', 'Figtree + DM Mono'],
       swatches: [['--bg', 'Bench'], ['--surface', 'Shelf'], ['--ink', 'Ink'], ['--ink-2', 'Label'], ['--learn', 'Learn blue'], ['--fit', 'Fit green'], ['--bike', 'Bike amber']]
     }
   };

@@ -55,12 +55,14 @@ Light `--fit` and `--bike` were darkened on 6 November 2026 (from `#13834a` and 
 
 ## Type
 
-| Token | Default (`data-font="1"`) | `data-font="2"` | `data-font="3"` |
+| Token | **Chosen** (default, `data-font="1"`) | Comparison only: `data-font="2"` | Comparison only: `data-font="3"` |
 |---|---|---|---|
-| `--f-text` and `--f-display` | Geist | Plus Jakarta Sans | Figtree |
-| `--f-mono` | Geist Mono | JetBrains Mono | DM Mono |
+| `--f-text` and `--f-display` | **Plus Jakarta Sans** (400–800) | Geist | Figtree |
+| `--f-mono` | **JetBrains Mono** (400–700) | Geist Mono | DM Mono |
 
-In the prototypes, five of these load from the Workstand Google Fonts link (`Geist:wght@300..800`, `Geist+Mono:wght@400..600`, `Plus+Jakarta+Sans:wght@400..800`, `Figtree:wght@400..800`, `DM+Mono:wght@400;500`). JetBrains Mono comes from the Logbook link. In the real build, load only the chosen pairing. Fallbacks: `ui-sans-serif, system-ui, sans-serif` and `ui-monospace, Menlo, monospace`.
+The user chose Plus Jakarta Sans + JetBrains Mono on 6 November 2026. The other two pairings exist only in the prototype's Preview bar.
+
+In the prototypes, all six families load from the Workstand Google Fonts link. In the real build, load only the chosen pair: `https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=JetBrains+Mono:wght@400..700&display=swap` (returned 200 on 6 November 2026). Fallbacks: `ui-sans-serif, system-ui, sans-serif` and `ui-monospace, Menlo, monospace`.
 
 ## Layout
 
