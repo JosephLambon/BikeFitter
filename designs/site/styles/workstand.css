@@ -24,8 +24,9 @@
   --bike: #a85100; --bike-tint: #fdf0de; --bike-dot: #efcf9f;
   --tone: var(--ink); --tone-tint: var(--surface); --tone-dot: #dcdcd6; --on-tone: #ffffff;
   --shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 30px rgba(0, 0, 0, .09);
-  --f-text: "Geist", ui-sans-serif, system-ui, sans-serif; --f-display: var(--f-text);
-  --f-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  /* Typeface chosen by the user on 6 November 2026: Plus Jakarta Sans + JetBrains Mono */
+  --f-text: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; --f-display: var(--f-text);
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   --max: 1120px; --head-h: 60px;
   color-scheme: light;
 
@@ -39,7 +40,7 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
-  &[data-font="2"] { --f-text: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  &[data-font="2"] { --f-text: "Geist", ui-sans-serif, system-ui, sans-serif; --f-mono: "Geist Mono", ui-monospace, Menlo, monospace; }
   &[data-font="3"] { --f-text: "Figtree", ui-sans-serif, system-ui, sans-serif; --f-mono: "DM Mono", ui-monospace, Menlo, monospace; }
 
   /* Tool colours: set by the page, and by anything that belongs to a tool */

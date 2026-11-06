@@ -1,6 +1,6 @@
 ---
 name: workstand-design
-description: BikeFitter's locked-in visual style, Workstand ("a tidy workshop - every tool has its place and its own colour"), chosen on 6 November 2026. Use it for ANY design work in this repo, even when the request doesn't say "Workstand" or "design" - building or changing a page, section, component, layout, colour, type, icon, diagram or the bike drawing; choosing between visual options; writing UI copy layout; or reviewing, critiquing or auditing a screen or screenshot. It holds the seven rules, tokens, type scale, components, signature moves, a decision procedure for new work and the review checklist every BikeFitter screen must pass.
+description: BikeFitter's locked-in visual style, Workstand ("a tidy workshop - every tool has its place and its own colour"), chosen on 6 November 2026. Use it for ANY design work in this repo, even when the request doesn't say "Workstand" or "design" - building or changing a page, section, component, layout, colour, type, icon, diagram or the bike drawing; choosing between visual options; writing UI copy layout; or reviewing, critiquing or auditing a screen or screenshot. It holds the seven rules, tokens, typeface (Plus Jakarta Sans + JetBrains Mono), type scale, components, signature moves, a decision procedure for new work and the review checklist every BikeFitter screen must pass.
 ---
 
 # Workstand: BikeFitter's design style
@@ -88,7 +88,14 @@ The pegboard is the only pattern or gradient in the style. No decorative gradien
 
 ## Type
 
-- **Faces:** Geist for everything you read and every heading, Geist Mono for metadata only. The alternatives are Plus Jakarta Sans + JetBrains Mono and Figtree + DM Mono (`data-font="2|3"`). The final pairing is still the user's call (`AGENTS.md` §12), so build with the tokens (`--f-text`, `--f-display`, `--f-mono`), never a family name.
+- **Faces: Plus Jakarta Sans + JetBrains Mono.** The user chose this pairing on 6 November 2026.
+  - Plus Jakarta Sans (variable, 400–800) is used for every heading and everything you read.
+  - JetBrains Mono (400–700) is used only for small metadata.
+  - Both are free on Google Fonts. Load them with `https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=JetBrains+Mono:wght@400..700&display=swap`.
+  - Fallbacks are `ui-sans-serif, system-ui, sans-serif` and `ui-monospace, Menlo, monospace`.
+- **Build with the tokens** (`--f-text`, `--f-display`, `--f-mono`). Never write a family name in a component.
+- **No other typefaces.** Geist + Geist Mono (`data-font="2"`) and Figtree + DM Mono (`data-font="3"`) stay in the prototype's Preview bar for comparison only. Never use them, or any other face, in new work.
+- **Plus Jakarta Sans is wide and geometric.** Keep the tight heading tracking (-0.03em). Check that long titles still balance at 375 px.
 - **Voice:** one family, weight does the work. Headings 650 with -0.03em tracking. Body 17 px / 1.55 with -0.011em. Labels 13 px 600. Sentence case everywhere. No all caps, no letter-spaced capitals, no italics for emphasis.
 - **Mono** is for small metadata only (12–13 px): tool meta lines, level meta, the explode percentage, `kbd`, hex codes. Never paragraphs, buttons or headings.
 
@@ -146,7 +153,7 @@ Run this on every UI change and every design review, together with `AGENTS.md` �
 2. **Tone.** Is the page or block on the right tool's tone? Is any colour used outside its tool? Are two tool colours mixed in one component?
 3. **Containers.** Is each container the right role (shelf card, hairline card, pegboard, window, chip)? Is a shadow on anything that isn't a window?
 4. **Geometry.** Are all radii on the scale and all lines 1 px hairlines?
-5. **Type.** Are all sizes from the scale? Are headings sentence case, 650 and left-aligned below the hero? Is mono only on metadata?
+5. **Type.** Is everything in Plus Jakarta Sans, with JetBrains Mono only on metadata? Are all sizes from the scale? Are headings sentence case, weight 650 and left-aligned below the hero?
 6. **Icons.** Are they from the sprite, 24 px grid and 1.75 px stroke? Is there any emoji?
 7. **Evidence.** Are tags shape-coded, ink on white, and linked to a source by register id?
 8. **Links.** Does everything that navigates end with an arrow? Is there exactly one primary `.btn` per section?
