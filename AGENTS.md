@@ -572,6 +572,16 @@ These are vetted starting facts. The cited source still has to be re-confirmed b
   - No approving review is required, because GitHub doesn't let you approve your own pull request.
 
   To make a change, branch from `develop`, then open a pull request into `develop`. Release by opening a pull request from `develop` into `main`.
+
+  **Agents never merge pull requests.** Merging is a human job. Only the user merges, and only after they explicitly approve that pull request. Approval for one pull request doesn't carry over to another.
+  - Agents may open pull requests and babysit them:
+    - Watch the checks and review comments.
+    - Check whether each comment is valid.
+    - Push fixes for valid comments to the pull request's branch.
+    - Reply to say what was fixed, or why a comment wasn't acted on.
+  - When a pull request is ready, tell the user it's ready for them to merge.
+  - Never run `gh pr merge`, turn on auto-merge, or push straight to a protected branch.
+  - "Commit to develop" means: open a pull request into `develop`, then stop.
 - Ask the user when a choice is genuinely theirs (scope, stack, hosting, branding). Otherwise make the sensible call and say what you chose.
 - Never fabricate citations, quotes, credentials or numbers.
 
@@ -621,3 +631,4 @@ These are vetted starting facts. The cited source still has to be re-confirmed b
 - 2026-11-06: User locked in **Workstand** as BikeFitter's design style. Added the `workstand-design` skill (`.claude/skills/workstand-design/`: rules, tokens, type scale, containers, decision procedure, review checklist, plus `references/tokens.md` with the full tokens and contrast table). Made it mandatory for every design choice and review (§0 rule 3, §6, §11). Replaced the Carbon tokens in §6.2 and the components in §6.3 with Workstand's. Moved Logbook, Velodrome and Carbon to reference only. Made Workstand the default style in `designs/site/boot.js`. Darkened light-mode Fit green (`#13834a` → `#107a44`) and Bike amber (`#b25600` → `#a85100`), because tool-coloured chip text on its own tint was below WCAG AA (4.22 and 4.43; now 4.75 and 4.87). Clarified rule 7: only the opening hero and the closing panel are centred, and lessons stay left.
 - 2026-11-06: Put the project under git at https://github.com/JosephLambon/BikeFitter. `main` holds only the repo guards (`.gitignore` and the `branch-policy` workflow); this work is on `develop`. Protected `main` and `develop` (§11 Git workflow).
 - 2026-11-06: User chose **Plus Jakarta Sans + JetBrains Mono** as Workstand's typeface pairing. It is now pairing 1 (the default) in `workstand.css` and the Preview bar. Geist + Geist Mono moved to pairing 2, for comparison only. Added JetBrains Mono to the Workstand font link. Updated the `workstand-design` skill, §6.2, §6.5 and §12.
+- 2026-11-06: Added the rule that agents never merge pull requests (§11 Git workflow). The user merges, after explicitly approving each one; agents may babysit pull requests and fix valid review comments.
