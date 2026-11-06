@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check your fit · BikeFitter</title>
+<meta name="description" content="Answer questions about your riding, your body and your bike, one at a time, and get explained starting points for your road bike fit.">
+<script src="boot.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400..800&amp;family=Martian+Mono:wdth,wght@75..112.5,300..600&amp;family=Newsreader:opsz,wght@6..72,400..700&amp;family=JetBrains+Mono:wght@400..700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=Source+Serif+4:opsz,wght@8..60,400..700&amp;family=Barlow+Condensed:wght@500;600;700;800&amp;family=Literata:opsz,wght@7..72,400..700&amp;family=Sofia+Sans+Extra+Condensed:wght@500..900&amp;family=Space+Mono:wght@400;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&amp;family=Geist+Mono:wght@400..600&amp;family=Plus+Jakarta+Sans:wght@400..800&amp;family=Figtree:wght@400..800&amp;family=DM+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="../shared/bike.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/logbook.css">
+<link rel="stylesheet" href="styles/velodrome.css">
+<link rel="stylesheet" href="styles/workstand.css">
+</head>
+<body data-page="fit">
+<script src="site.js"></script>
+<div class="page">
+<nav class="toc" aria-label="On this page"></nav>
+<main id="main">
+  <section class="hero hero--page" id="intro" data-toc="Introduction" aria-labelledby="fit-h">
+    <div class="wrap hero-in">
+      <div class="hero-text">
+        <p class="kicker">Check your fit</p>
+        <h1 class="title" id="fit-h">Find a better position on your&nbsp;bike.</h1>
+        <p class="dek">Answer questions about your riding, your body and your bike, one at a time. For each adjustment you’ll get a starting point, the reason for it, how to test it and where the advice comes from.</p>
+        <dl class="fields">
+          <div><dt>Format</dt><dd>One question at a time</dd></div>
+          <div><dt>You’ll need</dt><dd>Tape measure, hardback book</dd></div>
+          <div><dt>Privacy</dt><dd>Stays on your device</dd></div>
+        </dl>
+        <div class="actions"><a class="btn" href="#check"><span class="btn-t">Try the first question</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a><a class="more" href="#how">How it works</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" data-toc="How it works" aria-labelledby="how-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">How it works</p><h2 class="sec-title" id="how-h">Three short parts.</h2><p class="sec-dek">One question at a time. Your measurements never leave your device.</p></header>
+      <ol class="how">
+        <li><h3>Tell us about your riding.</h3><p>What you ride for, how far you usually go, and anything that hurts or goes numb.</p></li>
+        <li><h3>Measure yourself.</h3><p>Height, inside leg and a quick flexibility check. Each step shows you how.</p></li>
+        <li><h3>Measure your bike.</h3><p>Optional. Add how your bike is set up now, and we’ll show which settings sit inside or outside your starting range.</p></li>
+      </ol>
+      <p class="need"><strong>You’ll need:</strong> a tape measure, a hardback book, a wall, your bike and, ideally, a friend to help.</p>
+    </div>
+  </section>
+
+  <section class="section" id="check" data-toc="Try a question" aria-labelledby="check-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Try it</p><h2 class="sec-title" id="check-h">One question from the fit check.</h2></header>
+      <form class="fitq" data-fit-form novalidate>
+        <ol class="progress" aria-label="Fit check progress">
+          <li class="done">About your riding</li>
+          <li class="done">Your body</li>
+          <li aria-current="step">Your bike</li>
+          <li>Your starting points</li>
+        </ol>
+        <div class="ask">
+          <div>
+            <label for="saddle">
+              <span class="step-of">Your bike · Question 1 of 9</span>
+              <span class="q">How high is your saddle now?</span>
+              <span class="hint" id="saddle-hint">Measure from the centre of the bottom bracket (where the cranks turn) to the top of the saddle, along the line of the seat tube.</span>
+            </label>
+            <div class="entry">
+              <div class="field"><input id="saddle" name="saddle" inputmode="decimal" autocomplete="off" value="712" aria-describedby="saddle-hint saddle-error"><span class="unit">mm</span></div>
+              <button class="btn" type="submit"><span class="btn-t">Continue</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            </div>
+            <p class="error" id="saddle-error" data-fit-error hidden>Enter a saddle height between 550 and 900&nbsp;mm.</p>
+          </div>
+          <figure class="ask-fig" aria-hidden="true"><div class="bike-host" id="fit-bike"></div></figure>
+        </div>
+      </form>
+      <section class="result" id="fit-result" aria-live="polite" aria-labelledby="result-k">
+        <p class="k" id="result-k">Your range to test</p>
+        <p class="v"><span data-lo>709</span>–<span data-hi>715</span><small> mm</small></p>
+        <p class="from">Stay within <strong>3&nbsp;mm</strong> of your current <span data-now>712</span>&nbsp;mm, and change one thing at a time.</p>
+        <dl>
+          <div><dt>Why</dt><dd>Your body needs time to adapt, so small changes, one at a time, are easier to judge.</dd></div>
+          <div><dt>Method</dt><dd><span class="tag" data-ev="expert"><svg class="ico" aria-hidden="true"><use href="#i-expert"/></svg>Expert practice</span> Mat Steinmetz’s 2–3&nbsp;mm limit for saddle changes you make yourself<a class="fn" href="#src-steinmetz" aria-label="Source 2">2</a>, tested in Steve Hogg’s 3&nbsp;mm steps.<a class="fn" href="#src-hogg-height" aria-label="Source 1">1</a></dd></div>
+          <div><dt>How to test it</dt><dd>Ride a hill that takes at least three minutes, seated and pushing a gear. Change 3&nbsp;mm at a time.<a class="fn" href="#src-hogg-height" aria-label="Source 1">1</a> <a href="lesson.html">Full steps</a></dd></div>
+          <div><dt>See a pro if</dt><dd>You have pain, numbness or tingling that doesn’t settle: see a bike fitter, a physio or your GP.</dd></div>
+        </dl>
+      </section>
+      <p class="preview-note">Design preview: this is the only working question.</p>
+    </div>
+  </section>
+
+  <section class="section" id="mm" data-toc="Why such small steps?" aria-labelledby="mm-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">In millimetres</p><h2 class="sec-title" id="mm-h">Why such small steps?</h2><p class="sec-dek">Experienced fitters adjust a bike a few millimetres at a time, then test it. <strong>Here are some of the numbers they work with, on a ruler enlarged to fill your screen.</strong></p></header>
+      <svg class="ruler" viewBox="0 0 1280 210" role="img" aria-labelledby="ruler-t"><title id="ruler-t">An enlarged ruler from 0 to 12 millimetres marking 2 to 3 mm, 3 mm, 5 to 10 mm and 10 mm.</title><g id="ruler-g"></g></svg>
+      <ul class="marks">
+        <li><p class="v">2–3 mm</p><p>The most saddle change to try yourself after a professional fit.</p><p class="who">Mat Steinmetz, 51 Speedshop<a class="fn" href="#src-steinmetz" aria-label="Source 2">2</a></p></li>
+        <li><p class="v">3 mm</p><p>The step size for finding saddle height, testing each change under load.</p><p class="who">Steve Hogg, fitter<a class="fn" href="#src-hogg-height" aria-label="Source 1">1</a></p></li>
+        <li><p class="v">5–10 mm</p><p>The most front-end change to try yourself after a professional fit.</p><p class="who">Mat Steinmetz, 51 Speedshop<a class="fn" href="#src-steinmetz" aria-label="Source 2">2</a></p></li>
+        <li><p class="v">10 mm</p><p>Where cleats start: the pedal axle at least this far behind the ball of the foot.</p><p class="who">Jimmy Wilson, Cyclefit<a class="fn" href="#src-cyclefit" aria-label="Source 3">3</a></p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="safe" data-toc="Before you change anything" aria-labelledby="safe-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Safety</p><h2 class="sec-title" id="safe-h">Before you change anything.</h2><p class="sec-dek">A few habits keep every adjustment safe and easy to undo.</p></header>
+      <ul class="checklist">
+        <li><strong>Mark where you are now.</strong><span>Measure and write down each setting before you touch it.</span></li>
+        <li><strong>Change one thing at a time.</strong><span>Then you’ll know which change made the difference.</span></li>
+        <li><strong>Use the right torque.</strong><span>Follow the setting printed on each part, especially with carbon.</span></li>
+        <li><strong>Respect the limits.</strong><span>Keep the seatpost above its minimum-insertion mark, and stay within the fork maker’s limit for spacers.</span></li>
+        <li><strong>Test on a short ride first.</strong><span>Don’t make a big change just before a long ride.</span></li>
+        <li><strong>Get help if it hurts.</strong><span>Pain or numbness that doesn’t settle means seeing a bike fitter, a physio or your GP.</span></li>
+      </ul>
+    </div>
+  </section>
+</main>
+</div>
+<footer class="foot" data-sources="hogg-height steinmetz cyclefit"></footer>
+<script src="../shared/bike.js"></script>
+</body>
+</html>

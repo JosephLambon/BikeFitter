@@ -1,0 +1,74 @@
+/* Shared base styles for the exploded bike diagram. Designs override the --bx-* tokens. */
+.bx {
+  --bx-frame: #5b5b60; --bx-frame-hi: #7c7c82;
+  --bx-dark: #2c2c2e; --bx-dark-hi: #48484a;
+  --bx-metal: #9a9aa0; --bx-metal-hi: #c4c4c9;
+  --bx-spoke: #a1a1a6; --bx-wire: #8e8e93; --bx-teeth: #9a9aa0;
+  --bx-chain: #3a3a3c; --bx-chain-hi: #8e8e93; --bx-hole: #fff;
+  --bx-outline: transparent; --bx-outline-w: 1.2px;
+  --bx-active-fill: #0071e3; --bx-active-fill-hi: #4b9bf0; --bx-active-line: #0071e3;
+  --bx-ghost: #e8e8ed; --bx-ghost-hi: #f2f2f5; --bx-ghost-line: #e3e3e8; --bx-ghost-outline: transparent;
+  --bx-dim: 1; --bx-shadow: rgba(0, 0, 0, .08); --bx-ground: #d2d2d7; --bx-dim-line: #6e6e73;
+  --bx-lift: drop-shadow(0 6px 10px rgba(0, 0, 0, .18));
+  position: relative;
+}
+.bx-stage { position: relative; width: 100%; aspect-ratio: var(--bx-aspect, 16 / 10); }
+.bx-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.bx [class^="m-"], .bx [class*=" m-"] { stroke: var(--bx-outline); stroke-width: var(--bx-outline-w); vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.bx .hl { stroke: none; }
+.bx .m-frame { fill: var(--bx-frame); }   .bx .m-frame-hi { fill: var(--bx-frame-hi); }
+.bx .m-dark { fill: var(--bx-dark); }     .bx .m-dark-hi { fill: var(--bx-dark-hi); }
+.bx .m-metal { fill: var(--bx-metal); }   .bx .m-metal-hi { fill: var(--bx-metal-hi); }
+.bx .m-hole { fill: var(--bx-hole); }
+.bx .m-spoke { fill: none; stroke: var(--bx-spoke); stroke-width: 2.2; vector-effect: none; }
+.bx .o { fill: none; stroke: var(--bx-outline); stroke-linecap: round; stroke-linejoin: round; }
+.bx [class^="t-"] { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.bx .t-dark { stroke: var(--bx-dark); } .bx .t-metal { stroke: var(--bx-metal); }
+.bx .t-wire { stroke: var(--bx-wire); } .bx .t-chain { stroke: var(--bx-chain); }
+.bx .links { fill: none; stroke: var(--bx-chain-hi); }
+.bx .wrap { fill: none; stroke: var(--bx-dark-hi); }
+.bx .teeth { fill: none; stroke: var(--bx-teeth); }
+.bx .hit { fill: transparent; stroke: none; }
+.bx .bx-shadow { fill: var(--bx-shadow); }
+.bx .bx-groundline { stroke: var(--bx-ground); stroke-width: 1px; vector-effect: non-scaling-stroke; fill: none; }
+
+/* Dimensions */
+.bx .dim, .bx .dim-ext { fill: none; stroke: var(--bx-dim-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.bx .dim-ext { stroke-dasharray: 3 4; opacity: .7; }
+.bx .dim-head { fill: var(--bx-dim-line); }
+.bx .dim-label { fill: var(--bx-dim-line); font-size: 24px; font-family: inherit; letter-spacing: .01em; }
+.bx-dims, .bx-ground { transition: opacity .2s linear; }
+
+/* Selection */
+.bx-part { transition: opacity .25s ease; }
+.bx--interactive .bx-part { cursor: pointer; outline: none; }
+.bx.has-active .bx-part:not(.is-active) {
+  opacity: var(--bx-dim);
+  --bx-frame: var(--bx-ghost); --bx-frame-hi: var(--bx-ghost-hi);
+  --bx-dark: var(--bx-ghost); --bx-dark-hi: var(--bx-ghost-hi);
+  --bx-metal: var(--bx-ghost); --bx-metal-hi: var(--bx-ghost-hi);
+  --bx-spoke: var(--bx-ghost-line); --bx-wire: var(--bx-ghost-line); --bx-teeth: var(--bx-ghost-line);
+  --bx-chain: var(--bx-ghost); --bx-chain-hi: var(--bx-ghost-hi);
+  --bx-outline: var(--bx-ghost-outline);
+}
+.bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: fill .2s ease, stroke .2s ease; }
+.bx-part.is-active {
+  --bx-frame: var(--bx-active-fill); --bx-frame-hi: var(--bx-active-fill-hi);
+  --bx-dark: var(--bx-active-fill); --bx-dark-hi: var(--bx-active-fill-hi);
+  --bx-metal: var(--bx-active-fill); --bx-metal-hi: var(--bx-active-fill-hi);
+  --bx-spoke: var(--bx-active-line); --bx-wire: var(--bx-active-line); --bx-teeth: var(--bx-active-line);
+  --bx-chain: var(--bx-active-fill); --bx-chain-hi: var(--bx-active-fill-hi);
+  --bx-outline: var(--bx-active-line);
+}
+.bx-part.is-active > .bx-lift { filter: var(--bx-lift); }
+
+/* Info card */
+.bx-card { position: absolute; z-index: 2; width: min(320px, 90%); pointer-events: none; }
+.bx-card a { pointer-events: auto; }
+.bx--docked .bx-card { position: static; width: auto; margin-top: 16px; }
+.bx-card[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bx-part, .bx-dims, .bx-ground, .bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: none; }
+}

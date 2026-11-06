@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BikeFitter design directions</title>
+<meta name="description" content="BikeFitter’s chosen design style, Workstand, with the retired Logbook, Velodrome and Carbon directions kept for reference.">
+<style>
+:root {
+  --bg: #f5f5f3; --card: #ffffff; --text: #1d1d1f; --text-2: #5f5f63; --rule: #dcdcd7; --link: #0b57d0; --code: #efefec;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111112; --card: #1c1c1e; --text: #f2f2f0; --text-2: #a5a5a8; --rule: #36363a; --link: #8ab4ff; --code: #2a2a2d; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 4px; }
+.wrap { width: min(1180px, 100% - 32px); margin-inline: auto; }
+header { padding: 88px 0 48px; }
+h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1.05; font-weight: 700; letter-spacing: -.03em; margin: 0 0 16px; }
+.sub { font-size: clamp(18px, 2vw, 21px); line-height: 1.45; color: var(--text-2); max-width: 40em; margin: 0 0 12px; }
+.how { font-size: 15px; color: var(--text-2); margin: 0; }
+.grid { list-style: none; margin: 0; padding: 0 0 72px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+.chosen { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 12px; }
+.shot { display: block; aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--rule); }
+.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.body { padding: 24px 24px 26px; display: flex; flex-direction: column; flex: 1; }
+.lead-with { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 0 0 6px; }
+h2 { font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px; }
+.body > p.line { margin: 0 0 18px; color: var(--text-2); }
+dl { margin: 0 0 20px; font-size: 14px; display: grid; grid-template-columns: 5.6em 1fr; gap: 8px 12px; }
+dt { color: var(--text-2); }
+dd { margin: 0; }
+.swatches { display: flex; gap: 6px; }
+.swatches i { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(128, 128, 128, .4); }
+.links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: auto 0 16px; font-size: 16px; font-weight: 600; }
+.ask { font-size: 14px; color: var(--text-2); border-top: 1px solid var(--rule); padding-top: 14px; margin: 0; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--code); padding: 2px 6px; border-radius: 6px; color: var(--text); }
+.baseline { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; align-items: center; background: var(--card); border: 1px solid var(--rule); border-radius: 16px; padding: 16px; margin-bottom: 72px; }
+.baseline img { width: 100%; border-radius: 10px; display: block; border: 1px solid var(--rule); }
+.baseline h2 { font-size: 22px; }
+.baseline p { margin: 0 0 8px; color: var(--text-2); font-size: 15px; }
+h3.sec { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); margin: 0 0 14px; }
+footer { border-top: 1px solid var(--rule); padding: 24px 0 48px; color: var(--text-2); font-size: 13px; }
+footer p { margin: 0 0 8px; max-width: 64em; }
+@media (max-width: 1000px) { .grid { grid-template-columns: minmax(0, 1fr); max-width: 640px; } .baseline { grid-template-columns: 1fr; max-width: 640px; } }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>BikeFitter’s style: Workstand.</h1>
+  <p class="sub">A tidy workshop: every tool has its place and its own colour. Chosen on 6 November 2026. Logbook, Velodrome and Carbon are kept here for reference only.</p>
+  <p class="how">Workstand opens by default. The Preview bar at the bottom of the screen still switches typeface, and to the retired styles for comparison. Every style has light and dark modes.</p>
+</header>
+<main class="wrap">
+  <ul class="grid">
+    <li class="card">
+      <a class="shot" href="site/index.html?style=workstand" aria-hidden="true" tabindex="-1"><img src="assets/workstand.jpg" alt="" width="1200" height="750"></a>
+      <div class="body">
+        <p class="lead-with"><span class="chosen">Chosen</span> Leads with Notion</p>
+        <h2>Workstand</h2>
+        <p class="line">A tidy workshop: every tool has its place and its own colour. Friendly, modular and smart.</p>
+        <dl>
+          <dt>Palette</dt><dd><span class="swatches" aria-label="White, ink, Learn blue, Fit green and Bike amber"><i style="background:#ffffff"></i><i style="background:#1a1a19"></i><i style="background:#2b63e0"></i><i style="background:#107a44"></i><i style="background:#a85100"></i></span></dd>
+          <dt>Type</dt><dd>Geist + Geist Mono, Plus Jakarta Sans + JetBrains Mono, or Figtree + DM Mono</dd>
+          <dt>Signature</dt><dd>Tool colours that follow you (Learn blue, Fit green, Bike amber), dotted pegboard panels, real interface previews in windows, shape-coded evidence labels (◆ ● ▲)</dd>
+        </dl>
+        <p class="links"><a href="site/index.html?style=workstand">Open Workstand ›</a><a href="site/style.html?style=workstand">Its rules ›</a></p>
+        <p class="ask">All design work follows the <code>workstand-design</code> skill.</p>
+      </div>
+    </li>
+    <li class="card">
+      <a class="shot" href="site/index.html?style=logbook" aria-hidden="true" tabindex="-1"><img src="assets/logbook.jpg" alt="" width="1200" height="750"></a>
+      <div class="body">
+        <p class="lead-with">Leads with claude.dev</p>
+        <h2>Logbook</h2>
+        <p class="line">A fitter’s notebook: every page measured, labelled and indexed. Warm paper, graphite text and monospace structure.</p>
+        <dl>
+          <dt>Palette</dt><dd><span class="swatches" aria-label="Paper, graphite, ink blue and highlighter yellow"><i style="background:#f7f5ef"></i><i style="background:#1b1a17"></i><i style="background:#2443c9"></i><i style="background:#ffe870"></i></span></dd>
+          <dt>Type</dt><dd>Instrument Sans + IBM Plex Mono, Schibsted Grotesk + Martian Mono, or Newsreader + JetBrains Mono</dd>
+          <dt>Signature</dt><dd>[01] numbered navigation, “On this page” index with hatched reading progress, tree lines (└), job-card field grids, highlighter for the one thing to remember</dd>
+        </dl>
+        <p class="links"><a href="site/index.html?style=logbook">Open Logbook ›</a><a href="site/style.html?style=logbook">Its rules ›</a></p>
+        <p class="ask">Retired: kept for reference only.</p>
+      </div>
+    </li>
+    <li class="card">
+      <a class="shot" href="site/index.html?style=velodrome" aria-hidden="true" tabindex="-1"><img src="assets/velodrome.jpg" alt="" width="1200" height="750"></a>
+      <div class="body">
+        <p class="lead-with">Leads with The Verge</p>
+        <h2>Velodrome</h2>
+        <p class="line">A race-day programme: condensed headlines, a serif for reading, mono capitals for labels, and big numbers.</p>
+        <dl>
+          <dt>Palette</dt><dd><span class="swatches" aria-label="Paper, ink, track band blue, red line and blue line"><i style="background:#ffffff"></i><i style="background:#111113"></i><i style="background:#a8d4f2"></i><i style="background:#e0251b"></i><i style="background:#2338e0"></i></span></dd>
+          <dt>Type</dt><dd>Archivo + Source Serif 4 + JetBrains Mono, Barlow Condensed + Literata + IBM Plex Mono, or Sofia Sans Extra Condensed + Newsreader + Space Mono</dd>
+          <dt>Signature</dt><dd>Velodrome track lines under every page title, outlined lap-board numerals, slash navigation, evidence shown by label weight, a full-width wordmark footer</dd>
+        </dl>
+        <p class="links"><a href="site/index.html?style=velodrome">Open Velodrome ›</a><a href="site/style.html?style=velodrome">Its rules ›</a></p>
+        <p class="ask">Retired: kept for reference only.</p>
+      </div>
+    </li>
+  </ul>
+
+  <h3 class="sec">First baseline</h3>
+  <section class="baseline" aria-labelledby="carbon-h">
+    <a href="carbon/index.html" aria-hidden="true" tabindex="-1"><img src="assets/carbon.jpg" alt="" width="1200" height="750"></a>
+    <div>
+      <h2 id="carbon-h">Carbon</h2>
+      <p>The first direction you chose: a faithful take on Apple’s Pro pages. Kept for reference; Workstand replaced it as BikeFitter’s own identity. It has its own pages and no Preview bar.</p>
+      <p><a href="carbon/index.html">Open Carbon ›</a></p>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="wrap">
+    <p>Every direction shares the same original bike drawing (<code>shared/bike.js</code>) and the same sourced content. Fonts are free from Google Fonts. Every external link was checked on 6 November 2026. These are design previews, not the final build.</p>
+    <p>Workstand’s rules live in the <code>workstand-design</code> skill (<code>.claude/skills/workstand-design/</code>) and AGENTS.md, section 6.</p>
+  </div>
+</footer>
+</body>
+</html>

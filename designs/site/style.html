@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Style guide · BikeFitter</title>
+<meta name="description" content="The rules behind this BikeFitter style: principles, colour, type, components and signature moves.">
+<script src="boot.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400..800&amp;family=Martian+Mono:wdth,wght@75..112.5,300..600&amp;family=Newsreader:opsz,wght@6..72,400..700&amp;family=JetBrains+Mono:wght@400..700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&amp;family=Source+Serif+4:opsz,wght@8..60,400..700&amp;family=Barlow+Condensed:wght@500;600;700;800&amp;family=Literata:opsz,wght@7..72,400..700&amp;family=Sofia+Sans+Extra+Condensed:wght@500..900&amp;family=Space+Mono:wght@400;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&amp;family=Geist+Mono:wght@400..600&amp;family=Plus+Jakarta+Sans:wght@400..800&amp;family=Figtree:wght@400..800&amp;family=DM+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="../shared/bike.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/logbook.css">
+<link rel="stylesheet" href="styles/velodrome.css">
+<link rel="stylesheet" href="styles/workstand.css">
+</head>
+<body data-page="style">
+<script src="site.js"></script>
+<div class="page">
+<nav class="toc" aria-label="On this page"></nav>
+<main id="main">
+  <section class="hero hero--page" id="intro" data-toc="Introduction" aria-labelledby="sg-h">
+    <div class="wrap hero-in">
+      <div class="hero-text">
+        <p class="kicker">Style guide</p>
+        <h1 class="title" id="sg-h" data-style-name>Style</h1>
+        <p class="dek" data-style-line></p>
+        <dl class="fields" data-for="logbook">
+          <div><dt>Leads with</dt><dd>claude.dev: clear, structured, good to learn from</dd></div>
+          <div><dt>Also takes</dt><dd>Apple’s restraint, The Verge’s reading rhythm, Notion’s tidy blocks</dd></div>
+          <div><dt>Feels like</dt><dd>A workshop job card</dd></div>
+        </dl>
+        <dl class="fields" data-for="velodrome">
+          <div><dt>Leads with</dt><dd>The Verge: bold, clean and informative</dd></div>
+          <div><dt>Also takes</dt><dd>Apple’s cinematic bike, claude.dev’s mono labels, Notion’s card grid</dd></div>
+          <div><dt>Feels like</dt><dd>A race-day programme</dd></div>
+        </dl>
+        <dl class="fields" data-for="workstand">
+          <div><dt>Leads with</dt><dd>Notion: modern, smart, modular</dd></div>
+          <div><dt>Also takes</dt><dd>Apple’s polish, The Verge’s clear labels, claude.dev’s plain structure</dd></div>
+          <div><dt>Feels like</dt><dd>A well-organised workshop</dd></div>
+        </dl>
+        <p class="sg-note">Switch styles and typefaces with the Preview bar at the bottom of the screen. This page updates to match.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="principles" data-toc="Principles" aria-labelledby="pr-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Principles</p><h2 class="sec-title" id="pr-h">The rules.</h2><p class="sec-dek">Every page in this style follows these. If a new page breaks one, change the page, not the rule.</p></header>
+      <ol class="rules" data-for="logbook">
+        <li><strong>Paper and graphite.</strong> The page is warm paper and the text is graphite. No pure white, no pure black.</li>
+        <li><strong>Two colours, two jobs.</strong> Ink blue means you can act: links, focus and choices. Highlighter yellow means remember this: key takeaways and the selected bike part. Nothing else is coloured.</li>
+        <li><strong>Mono for structure, sans for reading.</strong> Labels, numbers, navigation and metadata use the monospace. Everything you read uses the text face.</li>
+        <li><strong>Everything is indexed.</strong> Navigation and sections are numbered [01], [02]. Hierarchy uses tree lines (└). Long pages have an “On this page” index with reading progress.</li>
+        <li><strong>Facts before prose.</strong> Every page opens with a grid of fields, such as Level, Evidence and Last checked, like a workshop job card.</li>
+        <li><strong>Flat and square.</strong> 1&nbsp;px rules, no shadows, corners no rounder than 2&nbsp;px. Buttons are solid graphite blocks with mono labels.</li>
+        <li><strong>One progress pattern.</strong> Reading progress, the fit check and the bike explode all use the same hatched bar.</li>
+      </ol>
+      <ol class="rules" data-for="velodrome">
+        <li><strong>Three voices.</strong> Condensed headlines announce. A serif carries everything you read. Mono capitals label things: navigation, buttons, bylines and dates.</li>
+        <li><strong>Track lines open every page.</strong> The four lines painted on a velodrome track (a band, then black, red and blue lines) run under each page title, and nowhere else.</li>
+        <li><strong>Big numbers.</strong> Levels, steps and results are set as huge condensed figures, like a lap board. Secondary numbers are outlined.</li>
+        <li><strong>Ink rules, square corners.</strong> Every section starts with a 2&nbsp;px ink rule and a numbered label. No rounded corners, no shadows.</li>
+        <li><strong>Colour has a meaning.</strong> Blue is something you can click. Red is where you are, or what you’ve selected. That’s all.</li>
+        <li><strong>Weight shows evidence.</strong> Research is a solid block, expert practice is outlined, and a rule of thumb is dashed. The stronger the evidence, the heavier the label.</li>
+        <li><strong>Slash navigation, wordmark sign-off.</strong> The nav reads BikeFitter / Learn / Check your fit / Explore the bike. Every footer ends with the full-width wordmark.</li>
+      </ol>
+      <ol class="rules" data-for="workstand">
+        <li><strong>Each tool has its colour.</strong> Learn is blue, Check your fit is green and Explore the bike is amber. The colour follows the tool everywhere: nav dot, icon, panel, button and the selected bike part. Pages that aren’t a tool are ink.</li>
+        <li><strong>Tools hang on pegboard.</strong> Previews sit in white windows on tinted, dotted panels, like tools on a workshop pegboard.</li>
+        <li><strong>Windows show the real thing.</strong> Every preview is a small, true version of BikeFitter’s own interface. Never a stock image.</li>
+        <li><strong>Shapes, not colours, for evidence.</strong> ◆ Research, ● Expert practice, ▲ Rule of thumb. The labels still work in black and white, and for colour-blind readers.</li>
+        <li><strong>Friendly geometry.</strong> 14&nbsp;px cards, 10&nbsp;px buttons, 8&nbsp;px chips, 1&nbsp;px hairlines. Only windows get a shadow.</li>
+        <li><strong>One icon set.</strong> 24&nbsp;px grid, 1.75&nbsp;px rounded strokes, drawn for BikeFitter. No emoji.</li>
+        <li><strong>Plain, left-aligned headings.</strong> Sentence case and semibold. Only a page’s opening and its closing panel are centred; lessons stay left, like articles. Anything that takes you somewhere ends with an arrow.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="colour" data-toc="Colour" aria-labelledby="col-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Colour</p><h2 class="sec-title" id="col-h">Palette.</h2><p class="sec-dek">Read live from the stylesheet, so switch theme to see the dark values.</p></header>
+      <ul class="swatches" id="swatches"></ul>
+    </div>
+  </section>
+
+  <section class="section" id="type" data-toc="Type" aria-labelledby="type-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Type</p><h2 class="sec-title" id="type-h">Typefaces.</h2><p class="sec-dek">Three free pairings from Google Fonts. The first is the default; try the others from the Preview bar.</p></header>
+      <ol class="font-list" id="font-list"></ol>
+      <div class="specimens">
+        <div><p class="spec-k">Display</p><p class="title spec-display">Make your bike fit you.</p></div>
+        <div><p class="spec-k">Section title</p><p class="sec-title">Every number has a source.</p></div>
+        <div><p class="spec-k">Reading text</p><p class="spec-body">Formulas based on your inside leg don’t account for your foot length or pedalling style, your saddle setback, how flexible you are, your crank length, or today’s thinner shoes and lower pedals.</p></div>
+        <div><p class="spec-k">Label</p><p class="kicker">Fundamentals · Lesson 5 · Last checked 6 November 2026</p></div>
+        <div><p class="spec-k">Figures</p><p class="result"><span class="v">709–715<small> mm</small></span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="parts" data-toc="Components" aria-labelledby="cmp-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Components</p><h2 class="sec-title" id="cmp-h">Building blocks.</h2></header>
+      <div class="sg-grid">
+        <div class="sg-cell"><p class="spec-k">Actions</p><div class="demo-row"><a class="btn" href="fit.html"><span class="btn-t">Check your fit</span><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a><button class="btn btn--quiet" type="button"><svg class="ico" aria-hidden="true"><use href="#i-bike"/></svg><span class="btn-t">Take it apart</span></button><a class="more" href="learn.html">Learn the basics</a></div></div>
+        <div class="sg-cell"><p class="spec-k">Evidence labels</p><div class="demo-row"><span class="tag" data-ev="research"><svg class="ico" aria-hidden="true"><use href="#i-research"/></svg>Research</span><span class="tag" data-ev="expert"><svg class="ico" aria-hidden="true"><use href="#i-expert"/></svg>Expert practice</span><span class="tag" data-ev="thumb"><svg class="ico" aria-hidden="true"><use href="#i-thumb"/></svg>Rule of thumb</span></div></div>
+        <div class="sg-cell"><p class="spec-k">Fields</p><dl class="fields"><div><dt>Level</dt><dd>1, Fundamentals</dd></div><div><dt>Evidence</dt><dd>Expert practice</dd></div><div><dt>Last checked</dt><dd>6 November 2026</dd></div></dl></div>
+        <div class="sg-cell"><p class="spec-k">Progress</p><ol class="progress" aria-label="Example progress"><li class="done">About your riding</li><li class="done">Your body</li><li aria-current="step">Your bike</li><li>Your starting points</li></ol></div>
+        <div class="sg-cell sg-wide"><p class="spec-k">Callout</p><aside class="callout"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><p><strong>Starting points, not prescriptions.</strong> If you have pain, numbness or an injury, see a qualified bike fitter, a physiotherapist or your GP.</p></aside></div>
+        <div class="sg-cell sg-wide"><p class="spec-k">Key takeaway</p><p class="takeaway"><mark>A formula gets you close. Your legs, under load, have the final say.</mark></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="signature" data-toc="Signature moves" aria-labelledby="sig-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Signature</p><h2 class="sec-title" id="sig-h">Signature moves.</h2><p class="sec-dek">The few details that make a page recognisably this style.</p></header>
+      <div class="sg-grid" data-for="logbook">
+        <div class="sg-cell"><p class="spec-k">Tree lines</p><ul class="tree"><li>Steve Hogg, fitter</li><li>Seat height: how hard can it be?</li><li>Last verified 6 November 2026</li></ul></div>
+        <div class="sg-cell"><p class="spec-k">Hatched progress</p><div class="read"><span class="read-bar"><i style="width:62%"></i></span><span class="read-pc">62%</span></div></div>
+        <div class="sg-cell"><p class="spec-k">Indexed navigation</p><p class="index-demo"><span>[01] Learn</span><span>[02] Check your fit</span><span>[03] Explore the bike</span></p></div>
+        <div class="sg-cell"><p class="spec-k">Highlighter</p><p>Use it once per page, on the one line to <mark>remember</mark>.</p></div>
+      </div>
+      <div class="sg-grid" data-for="velodrome">
+        <div class="sg-cell sg-wide"><p class="spec-k">Track lines</p><div class="track" aria-hidden="true"></div></div>
+        <div class="sg-cell"><p class="spec-k">Lap-board numbers</p><p class="lapboard"><span>1</span><span class="outline">2</span><span class="outline">3</span></p></div>
+        <div class="sg-cell"><p class="spec-k">Slash navigation</p><p class="slash-demo">BikeFitter / Learn / Check your fit / Explore the bike</p></div>
+        <div class="sg-cell sg-wide"><p class="spec-k">Wordmark sign-off</p><p class="wordmark-demo" aria-hidden="true">BikeFitter</p></div>
+      </div>
+      <div class="sg-grid" data-for="workstand">
+        <div class="sg-cell sg-wide"><p class="spec-k">Tool colours</p><div class="demo-row"><span class="pill" data-pillar="learn"><svg class="ico" aria-hidden="true"><use href="#i-learn"/></svg>Learn</span><span class="pill" data-pillar="fit"><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg>Check your fit</span><span class="pill" data-pillar="bike"><svg class="ico" aria-hidden="true"><use href="#i-bike"/></svg>Explore the bike</span></div></div>
+        <div class="sg-cell sg-wide"><p class="spec-k">Pegboard and window</p><div class="tool-visual" data-pillar="fit"><div class="window"><p class="window-bar"><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg>Fit check</p><ol class="mini-list"><li><b>1</b>About your riding<small>Done</small></li><li><b>2</b>Your body<small>Done</small></li><li><b>3</b>Your bike<small>Optional</small></li></ol></div></div></div>
+        <div class="sg-cell"><p class="spec-k">Icon set</p><p class="icon-demo"><svg class="ico" aria-hidden="true"><use href="#i-learn"/></svg><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg><svg class="ico" aria-hidden="true"><use href="#i-bike"/></svg><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><svg class="ico" aria-hidden="true"><use href="#i-mark"/></svg></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="drawing" data-toc="The bike drawing" aria-labelledby="dr-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Drawing</p><h2 class="sec-title" id="dr-h">The bike, in this style.</h2><p class="sec-dek">The same original drawing on every page. Only its colours and the info card change.</p></header>
+      <div class="figure sg-bike"><div class="bike-host" id="guide-bike"></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="dont" data-toc="Don’t" aria-labelledby="dont-h">
+    <div class="wrap">
+      <header class="sec-head"><p class="sec-label">Avoid</p><h2 class="sec-title" id="dont-h">Don’t.</h2></header>
+      <ul class="checklist dont" data-for="logbook"><li><strong>Don’t decorate with colour.</strong><span>Blue and yellow have jobs. If it isn’t a link or a key point, it’s graphite.</span></li><li><strong>Don’t centre reading text.</strong><span>Text sits on the left edge of the reading column, like a notebook.</span></li><li><strong>Don’t add shadows or gradients.</strong><span>Depth comes from rules and paper tones only.</span></li><li><strong>Don’t set paragraphs in mono.</strong><span>Mono is for labels, numbers and structure.</span></li></ul>
+      <ul class="checklist dont" data-for="velodrome"><li><strong>Don’t use red or blue as decoration.</strong><span>Blue is clickable, red is selected. Track lines appear once per page.</span></li><li><strong>Don’t round corners.</strong><span>Everything is square, like a printed programme.</span></li><li><strong>Don’t set headlines in the serif.</strong><span>The serif is for reading; headlines are always condensed.</span></li><li><strong>Don’t bury numbers.</strong><span>If a number matters, make it big.</span></li></ul>
+      <ul class="checklist dont" data-for="workstand"><li><strong>Don’t add a fourth colour.</strong><span>Three tools, three colours. Everything else is ink and grey.</span></li><li><strong>Don’t use colour for evidence.</strong><span>Evidence labels use shapes.</span></li><li><strong>Don’t shadow cards.</strong><span>Only windows float; cards sit flat on the shelf.</span></li><li><strong>Don’t use emoji or stock art.</strong><span>Use the icon set and real interface previews.</span></li></ul>
+    </div>
+  </section>
+</main>
+</div>
+<footer class="foot"></footer>
+<script src="../shared/bike.js"></script>
+</body>
+</html>
