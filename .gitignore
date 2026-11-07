@@ -4,3 +4,12 @@
 # Claude Code: personal, machine-specific settings.
 # Shared project skills in .claude/skills/ are committed.
 .claude/settings.local.json
+
+# App build and tests
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+*.local

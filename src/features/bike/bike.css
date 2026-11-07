@@ -1,0 +1,57 @@
+/* Exploded bike drawing. Ported from designs/shared/bike.css. Theme it only through the --bx-*
+   tokens (src/theme/tokens.ts); never change the geometry for styling. */
+.bx { position: relative; }
+.bx-stage { position: relative; width: 100%; height: 100%; }
+.bx-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.bx [class^="m-"], .bx [class*=" m-"] { stroke: var(--bx-outline); stroke-width: var(--bx-outline-w); vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.bx .hl { stroke: none; }
+.bx .m-frame { fill: var(--bx-frame); }   .bx .m-frame-hi { fill: var(--bx-frame-hi); }
+.bx .m-dark { fill: var(--bx-dark); }     .bx .m-dark-hi { fill: var(--bx-dark-hi); }
+.bx .m-metal { fill: var(--bx-metal); }   .bx .m-metal-hi { fill: var(--bx-metal-hi); }
+.bx .m-hole { fill: var(--bx-hole); }
+.bx .m-spoke { fill: none; stroke: var(--bx-spoke); stroke-width: 2.2; vector-effect: none; }
+.bx .o { fill: none; stroke: var(--bx-outline); stroke-linecap: round; stroke-linejoin: round; }
+.bx [class^="t-"] { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.bx .t-dark { stroke: var(--bx-dark); } .bx .t-metal { stroke: var(--bx-metal); }
+.bx .t-wire { stroke: var(--bx-wire); } .bx .t-chain { stroke: var(--bx-chain); }
+.bx .links { fill: none; stroke: var(--bx-chain-hi); }
+.bx .wrap { fill: none; stroke: var(--bx-dark-hi); }
+.bx .teeth { fill: none; stroke: var(--bx-teeth); }
+.bx .hit { fill: transparent; stroke: none; }
+.bx .bx-shadow { fill: var(--bx-shadow); }
+.bx .bx-groundline { stroke: var(--bx-ground); stroke-width: 1px; vector-effect: non-scaling-stroke; fill: none; }
+.bx-ground { transition: opacity .2s linear; }
+
+/* Selection: the selected part goes amber; everything else ghosts */
+.bx-part { transition: opacity .25s ease; }
+.bx--interactive .bx-part { cursor: pointer; }
+.bx--interactive .bx-part:focus { outline: none; }
+.bx.has-active .bx-part:not(.is-active) {
+  opacity: var(--bx-dim);
+  --bx-frame: var(--bx-ghost); --bx-frame-hi: var(--bx-ghost-hi);
+  --bx-dark: var(--bx-ghost); --bx-dark-hi: var(--bx-ghost-hi);
+  --bx-metal: var(--bx-ghost); --bx-metal-hi: var(--bx-ghost-hi);
+  --bx-spoke: var(--bx-ghost-line); --bx-wire: var(--bx-ghost-line); --bx-teeth: var(--bx-ghost-line);
+  --bx-chain: var(--bx-ghost); --bx-chain-hi: var(--bx-ghost-hi);
+  --bx-outline: var(--bx-ghost-outline);
+}
+.bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: fill .2s ease, stroke .2s ease; }
+.bx-part.is-active {
+  --bx-frame: var(--bx-active-fill); --bx-frame-hi: var(--bx-active-fill-hi);
+  --bx-dark: var(--bx-active-fill); --bx-dark-hi: var(--bx-active-fill-hi);
+  --bx-metal: var(--bx-active-fill); --bx-metal-hi: var(--bx-active-fill-hi);
+  --bx-spoke: var(--bx-active-line); --bx-wire: var(--bx-active-line); --bx-teeth: var(--bx-active-line);
+  --bx-chain: var(--bx-active-fill); --bx-chain-hi: var(--bx-active-fill-hi);
+  --bx-outline: var(--bx-active-line);
+}
+.bx-part.is-active > .bx-lift { filter: var(--bx-lift); }
+
+/* Info card: floats beside the part, or docks under the drawing on narrow hosts */
+.bx-card { position: absolute; z-index: 2; width: min(320px, 90%); pointer-events: none; }
+.bx-card a { pointer-events: auto; }
+.bx--docked .bx-card { position: static; width: auto; margin-top: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bx-part, .bx-ground, .bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: none; }
+}

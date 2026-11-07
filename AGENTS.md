@@ -282,7 +282,7 @@ How to use the skill:
 - **Other agents:** before any design task, read `.claude/skills/workstand-design/SKILL.md` and `.claude/skills/workstand-design/references/tokens.md`.
 
 Precedence, in order:
-1. `designs/site/styles/workstand.css` holds the values.
+1. `designs/site/styles/workstand.css` holds the values. The app ports them into `src/theme/tokens.ts` (custom properties and the MUI theme); keep the two in step.
 2. The skill says how to apply the rules and how to review.
 3. This section is the summary.
 
@@ -423,7 +423,7 @@ Retired directions (reference only):
 
 ### 7.3 Content data model (suggested)
 
-Keep sources in one registry (for example `content/sources.json`): `id`, `title`, `author`, `org`, `tier`, `url`, `doi?`, `lastVerified`, `checkMethod`, `notes`. Lessons and calculator rules reference sources by `id` only, never by raw URL.
+Keep sources in one registry (in the app: `src/content/sources.ts`): `id`, `title`, `author`, `org`, `tier`, `url`, `doi?`, `lastVerified`, `checkMethod`, `notes`. Lessons and calculator rules reference sources by `id` only, never by raw URL.
 
 ### 7.4 Link verification
 
@@ -546,13 +546,16 @@ These are vetted starting facts. The cited source still has to be re-confirmed b
 
 ---
 
-## 10. Tech approach (recommended; confirm before scaffolding)
+## 10. Tech approach (stack chosen 2026-11-07)
 
-- **Recommended:** Astro + TypeScript static site. Lessons in MDX. Interactive "islands" (Preact or React) for the calculator and the anatomy explorer. Inline SVG for diagrams. CSS custom properties for tokens. No backend.
+- **Stack (the user chose it on 2026-11-07):** Vite + React + TypeScript single-page app, React Router for routes, and MUI (Material UI) components and theme system, themed as Workstand. Inline SVG for diagrams. Workstand tokens are CSS custom properties written from `src/theme/tokens.ts`; the MUI theme (`src/theme/theme.ts`) is built from the same values. No backend. This replaces the earlier Astro recommendation.
+- **Layout:** `src/` holds the app. `src/features/<feature>/` holds a feature's logic, data and components (`features/bike/` is the anatomy explorer, ported from `designs/shared/bike.js`). `src/pages/` holds routed pages, `src/components/` the shell, `src/content/` the source register.
+- **Feature flags:** `src/flags.ts`, one `VITE_FLAG_*` env var per feature, read at call time. Production builds leave every flag off unless set; `.env.development` turns them on for `npm run dev`. `exploreBike` (`VITE_FLAG_EXPLORE_BIKE`) gates `/bike`.
+- **Commands:** `npm run dev`, `npm run build`, `npm run typecheck`, `npm test` (Vitest + Testing Library), `npm run test:coverage`, `npm run test:e2e` (Playwright, Chromium), `npm run test:all`.
 - **Calculator logic:** pure, unit-tested TypeScript functions. Each function references its source `id`s.
 - **Quality gates:** link checker, unit tests for calculator rules, Lighthouse (aim for 95+ on Performance and Accessibility), axe accessibility checks.
-- **Hosting:** any static host (Vercel, Netlify or GitHub Pages). Decide with the user.
-- **`designs/` is not the app.** It holds static HTML prototypes that open straight from disk (classic scripts, not ES modules, so `file://` works). Their only external dependency is Google Fonts; without a connection they fall back to system fonts. When the real build starts, port `shared/bike.js` into a component rather than copying the pages. Port Workstand's tokens from `site/styles/workstand.css` and build the components the skill describes. Leave the retired styles and the Preview bar behind.
+- **Hosting:** any static host (Vercel, Netlify or GitHub Pages). Decide with the user. A single-page app needs the host to serve `index.html` for every route.
+- **`designs/` is not the app.** It holds static HTML prototypes that open straight from disk (classic scripts, not ES modules, so `file://` works). Their only external dependency is Google Fonts; without a connection they fall back to system fonts. `shared/bike.js` is now ported to `src/features/bike/`, and Workstand's tokens to `src/theme/`. Build further components the way the skill describes. Leave the retired styles and the Preview bar behind.
 
 ---
 
@@ -607,7 +610,8 @@ These are vetted starting facts. The cited source still has to be re-confirmed b
 - [ ] Decide whether to keep the retired Logbook, Velodrome and Carbon prototypes in `designs/` for reference, or delete them.
 - [ ] Find a verifiable Tier 1 or 2 source for the LeMond (0.883) and Hamley (109%) saddle-height formulas, for example by getting the Peveler et al. 2005 full text (§8). Until then, keep them out of the calculator. (Partly done: Hogg confirms LeMond's definition, but argues against using it. Decide with the user whether lessons may show it as a criticised rule of thumb.)
 - [x] Confirm Hogg's "inseam formulas ignore setback" wording (confirmed 2026-11-06 from the full page; see §8).
-- [ ] Confirm the tech stack and hosting (§10).
+- [x] Confirm the tech stack (§10): Vite + React + TypeScript + React Router + MUI (chosen 2026-11-07).
+- [ ] Choose hosting (§10).
 - [ ] Choose the site name and brand mark ("BikeFitter" is the working name).
 - [ ] Source the bar width ↔ shoulder width guidance and the heel method from Tier 2 sources.
 - [ ] Find canonical links for Holmes 1994, Swart & Holliday 2019 and Hamley & Thomas 1967.
@@ -632,3 +636,4 @@ These are vetted starting facts. The cited source still has to be re-confirmed b
 - 2026-11-06: Put the project under git at https://github.com/JosephLambon/BikeFitter. `main` holds only the repo guards (`.gitignore` and the `branch-policy` workflow); this work is on `develop`. Protected `main` and `develop` (§11 Git workflow).
 - 2026-11-06: User chose **Plus Jakarta Sans + JetBrains Mono** as Workstand's typeface pairing. It is now pairing 1 (the default) in `workstand.css` and the Preview bar. Geist + Geist Mono moved to pairing 2, for comparison only. Added JetBrains Mono to the Workstand font link. Updated the `workstand-design` skill, §6.2, §6.5 and §12.
 - 2026-11-06: Added the rule that agents never merge pull requests (§11 Git workflow). The user merges, after explicitly approving each one; agents may babysit pull requests and fix valid review comments.
+- 2026-11-07: User chose the stack: Vite + React + TypeScript + React Router + MUI (§10). Built the first real feature, **Explore the bike** (`/bike`), in `src/`, behind the `exploreBike` flag: the exploded-bike engine ported from `designs/shared/bike.js` to typed modules and a React component, the scroll reel with in-place button and slider, Workstand tokens as CSS custom properties plus an MUI theme, and the source register in `src/content/sources.ts`. Re-checked the Cyclefit, Empfield and Hogg seat-height sources (200 and content confirmed). Added Vitest, Testing Library and Playwright. The page's closing "next" panel waits until Check your fit exists, so it never links to a page that isn't there.

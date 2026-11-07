@@ -16,6 +16,7 @@ description: BikeFitter's locked-in visual style, Workstand ("a tidy workshop - 
 | What | Where | Wins when they disagree on… |
 |---|---|---|
 | Token values and component styling | `designs/site/styles/workstand.css` (scoped to `:root[data-style="workstand"]`), with layout in `designs/site/styles/base.css` | Values |
+| The same values in the app | `src/theme/tokens.ts` (custom properties) and `src/theme/theme.ts` (MUI theme), ported from `workstand.css` | Nothing: change them together with the stylesheet |
 | The rules, palette, type and components, live | `designs/site/style.html?style=workstand` | Wording shown to people |
 | How to apply the rules, and how to review | This skill | Process |
 | Content rules (sources, British English, safety copy) | `AGENTS.md` §0, §1.1, §4.5, §7 | Always apply on top of this skill |
