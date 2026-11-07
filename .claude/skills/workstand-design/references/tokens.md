@@ -42,12 +42,14 @@ Light `--fit` and `--bike` were darkened on 6 November 2026 (from `#13834a` and 
 
 | Token or value | Use |
 |---|---|
-| Radius 20 px (16 px at ≤ 760 px) | Pegboard panels: hero figure, `.figure`, `.result`, `.takeaway`, `.next` |
-| Radius 14 px | Cards, the bike host window, fit question card, info card, evidence, levels, facts |
-| Radius 12 px | Windows (12 12 0 0 when they sit on a pegboard's bottom edge), fields, pager |
+| Radius 20 px | Pegboard panels: hero figure, `.figure`, `.result`, `.takeaway`, `.next` (only `.hero-figure` and `.figure` drop to 16 px at ≤ 760 px) |
+| Radius 14 px | Cards and stand-alone windows: bike host, `.fitq`, `.bx-card`, `.result dl`, evidence, levels, facts |
+| Radius 12 px | `.window` interface previews (12 12 0 0 when they sit on a pegboard's bottom edge), fields, pager |
 | Radius 10 px | Buttons, `.more`, nav links, icon buttons, the fit box inside the info card |
-| Radius 8 px | Chips, tags, the brand mark, number badges |
-| Radius 6–7 px | Inline badges: `kbd`, mini-list numbers, explode percentage, lesson numbers, focus ring |
+| Radius 9 px | Large step badge (`.how li::before`) |
+| Radius 8 px | Chips, tags, the brand mark, step and anatomy badges |
+| Radius 6–7 px | Inline badges: `kbd`, mini-list numbers (6), lesson and checklist numbers (7), explode percentage, system chip, focus ring |
+| Radius 3 px | Progress bar segments |
 | `--shadow` light | `0 1px 2px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.09)`, windows only |
 | `--shadow` dark | `0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45)`, windows only |
 | Hairline | `1px solid var(--rule)` |
@@ -96,7 +98,7 @@ In the prototypes, all six families load from the Workstand Google Fonts link. I
 
 ## Contrast (WCAG 2.1, checked 6 November 2026)
 
-Normal text needs 4.5:1. Large text (24 px and up, or 18.66 px bold) and UI graphics need 3:1.
+Normal text needs 4.5:1. Large text (24 px and up, or 18.66 px at 700+; 650 doesn't count as bold) and UI graphics need 3:1.
 
 | Text on background | Light | Dark |
 |---|---|---|
