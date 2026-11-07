@@ -10,7 +10,6 @@ function reducedMotion(on: boolean) {
   }));
 }
 const slider = () => screen.getByRole('slider', { name: 'How far apart the bike is' });
-const meter = () => screen.getByTestId('explode-pc');
 
 /** Give the reel a real size (jsdom has no layout): 3000 px tall at y = 0, 1000 px viewport. */
 function sizeReel() {
@@ -27,22 +26,49 @@ function scrollTo(y: number) {
 }
 
 describe('Explore the bike page', () => {
-  it('says what the page is for, and how to use it', () => {
+  it('names the page and cues a scroll, with nothing else below the drawing', () => {
     reducedMotion(false);
     renderApp('/bike', { exploreBike: true });
-    const main = screen.getByRole('main');
-    expect(within(main).getAllByText('Explore the bike')[0]).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: /^What every part of a road bike\s+does\.$/u })).toBeInTheDocument();
-    expect(screen.getByText(/Scroll down, or press Take it apart/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'What you’re looking at.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
+    expect(screen.getByTestId('scroll-cue')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(screen.getByRole('main')).queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    expect(screen.getByTestId('bx-bench')).toBeInTheDocument();
     expect(document.title).toBe('Explore the bike · BikeFitter');
   });
 
-  it('drops the scroll instructions when motion is reduced', () => {
+  it('uses the cable scrubber, nudges while together, and drops the percentage', () => {
+    reducedMotion(false);
+    renderApp('/bike', { exploreBike: true });
+    expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-scrubber]')).toHaveAttribute('data-scrubber', 'cable');
+    expect(screen.getByTestId('scrubber-nudge')).toBeInTheDocument();
+    fireEvent.change(slider(), { target: { value: 30 } });
+    expect(screen.queryByTestId('scrubber-nudge')).not.toBeInTheDocument();
+  });
+
+  it('keeps the heading and turns the scroll cue into a hint as the bike comes apart', () => {
+    reducedMotion(false);
+    renderApp('/bike', { exploreBike: true });
+    const hint = screen.getByTestId('part-hint');
+    expect(hint).toHaveTextContent('a part to learn more.');
+    expect(hint).toHaveStyle({ opacity: '0' });
+    fireEvent.change(slider(), { target: { value: 50 } });
+    expect(hint).toHaveStyle({ opacity: '1' });
+    expect(screen.getByTestId('scroll-cue')).toHaveStyle({ opacity: '0' });
+    expect(screen.getByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeVisible();
+  });
+
+  it('has no design-review pickers left on the page', () => {
+    reducedMotion(false);
+    renderApp('/bike', { exploreBike: true });
+    expect(screen.queryByRole('group', { name: /^Preview/ })).not.toBeInTheDocument();
+  });
+
+  it('drops the scroll cue and shows the hint straight away when motion is reduced', () => {
     reducedMotion(true);
     renderApp('/bike', { exploreBike: true });
-    expect(screen.getByText(/Press Take it apart, or use the slider/)).toBeInTheDocument();
-    expect(screen.queryByText(/Scroll down/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('scroll-cue')).not.toBeInTheDocument();
+    expect(screen.getByTestId('part-hint')).toHaveStyle({ opacity: '1' });
   });
 
   it('takes the bike apart with the slider, in place, and says how far', () => {
@@ -51,19 +77,19 @@ describe('Explore the bike page', () => {
     expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
     fireEvent.change(slider(), { target: { value: 42 } });
     expect(slider()).toHaveAttribute('aria-valuetext', '42% apart');
-    expect(meter()).toHaveTextContent('42%');
-    expect(screen.getByRole('button', { name: 'Take it apart' })).toBeInTheDocument();
+    
+    expect(screen.getByRole('button', { name: 'Take the bike apart' })).toBeInTheDocument();
     fireEvent.change(slider(), { target: { value: 80 } });
-    expect(screen.getByRole('button', { name: 'Put it back together' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Put the bike back together' })).toBeInTheDocument();
   });
 
   it('takes it apart and puts it back with the button', async () => {
     reducedMotion(true);
     renderApp('/bike', { exploreBike: true });
-    await userEvent.click(screen.getByRole('button', { name: 'Take it apart' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Take the bike apart' }));
     expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
-    expect(meter()).toHaveTextContent('100%');
-    await userEvent.click(screen.getByRole('button', { name: 'Put it back together' }));
+    expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
+    await userEvent.click(screen.getByRole('button', { name: 'Put the bike back together' }));
     expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
   });
 
@@ -72,9 +98,9 @@ describe('Explore the bike page', () => {
     renderApp('/bike', { exploreBike: true });
     sizeReel();
     scrollTo(900);
-    expect(meter()).toHaveTextContent('50%');
+    expect(slider()).toHaveAttribute('aria-valuetext', '50% apart');
     scrollTo(1600);
-    expect(meter()).toHaveTextContent('100%');
+    expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
   });
 
   it('never makes the drawing jump after the slider is used: scroll takes over only once it catches up', () => {
@@ -84,10 +110,10 @@ describe('Explore the bike page', () => {
     scrollTo(200); // together
     fireEvent.change(slider(), { target: { value: 80 } });
     scrollTo(480); // scroll maps to 20%: still behind the slider's 80%
-    expect(meter()).toHaveTextContent('80%');
+    expect(slider()).toHaveAttribute('aria-valuetext', '80% apart');
     scrollTo(1320); // maps to 80%: caught up, scroll is back in control
     scrollTo(900);
-    expect(meter()).toHaveTextContent('50%');
+    expect(slider()).toHaveAttribute('aria-valuetext', '50% apart');
   });
 
   it('ignores scroll when motion is reduced', () => {
@@ -95,7 +121,7 @@ describe('Explore the bike page', () => {
     renderApp('/bike', { exploreBike: true });
     sizeReel();
     scrollTo(1600);
-    expect(meter()).toHaveTextContent('00%');
+    expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
   });
 
   it('lists the sources behind its fit notes in the footer', () => {

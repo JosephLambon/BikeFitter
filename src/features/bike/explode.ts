@@ -15,12 +15,14 @@ export function explodeOffset(part: { v: [number, number]; w: [number, number] }
 
 export interface Box { x: number; y: number; width: number; height: number }
 
-/** A viewBox that frames the drawing with padding, matched to the stage's aspect ratio. */
-export function fitViewBox(b: Box, progress: number, aspect: number): [number, number, number, number] | null {
+/** A viewBox that frames the drawing with padding, matched to the stage's aspect ratio. Extra
+    height goes above and below the drawing, or all above it when `anchorBottom` is set (so a
+    bike on a workbench stays on the bench, not floating mid-stage). */
+export function fitViewBox(b: Box, progress: number, aspect: number, anchorBottom = false): [number, number, number, number] | null {
   if (!b.width) return null;
   const pad = 24 + 36 * progress;
   let x = b.x - pad, y = b.y - pad, w = b.width + pad * 2, h = b.height + pad * 2;
-  if (w / h < aspect) { const nw = h * aspect; x -= (nw - w) / 2; w = nw; } else { const nh = w / aspect; y -= (nh - h) / 2; h = nh; }
+  if (w / h < aspect) { const nw = h * aspect; x -= (nw - w) / 2; w = nw; } else { const nh = w / aspect; y -= anchorBottom ? nh - h : (nh - h) / 2; h = nh; }
   return [r1(x), r1(y), r1(w), r1(h)];
 }
 

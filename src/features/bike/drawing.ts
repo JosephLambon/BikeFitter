@@ -162,5 +162,17 @@ export const draw = {
 };
 
 /** Ground line and shadow under the assembled bike. */
-export const groundMarkup = '<ellipse class="bx-shadow" cx="90" cy="' + (-GROUND + 6) + '" rx="820" ry="20"/>' +
+/** The lowest point of the assembled drawing: the bottom of the ground shadow. */
+export const REST_BOTTOM = -GROUND + 6 + 20;
+
+export const groundMarkup = '<ellipse class="bx-shadow" cx="90" cy="' + (REST_BOTTOM - 20) + '" rx="820" ry="20"/>' +
   '<path class="bx-groundline" d="M-820 ' + (-GROUND) + 'H1000"/>';
+
+/** The workbench the bike stands on: a worktop and the bench front below it. Drawn in the
+   bike's own coordinates so the tyres always sit on the worktop, and drawn wide and deep so it
+   runs to the edges of the stage, which clips it. */
+const WORKTOP = 44;
+/** How far below the ground the stage should always show (worktop plus some bench front). */
+export const BENCH_BOTTOM = -GROUND + WORKTOP + 40;
+export const benchMarkup = '<rect class="bx-bench-front" x="-6000" y="' + (-GROUND + WORKTOP) + '" width="12000" height="6000"/>' +
+  '<rect class="bx-bench-top" x="-6000" y="' + (-GROUND) + '" width="12000" height="' + WORKTOP + '"/>';

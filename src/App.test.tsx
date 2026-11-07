@@ -6,7 +6,7 @@ import { renderApp } from './test/renderApp';
 describe('app routes and the exploreBike flag', () => {
   it('flag on: serves Explore the bike, links it from the nav, and sends the home page there', async () => {
     const { router } = renderApp('/', { exploreBike: true });
-    expect(await screen.findByRole('heading', { level: 1, name: /^What every part of a road bike\s+does\.$/u })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/bike');
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'Explore the bike' })).toHaveAttribute('aria-current', 'page');

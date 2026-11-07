@@ -6,7 +6,7 @@ import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import { SOURCES } from '../../content/sources';
 import { clamp, explodeOffset, fitViewBox, placeCard, type Rect } from './explode';
-import { groundMarkup } from './drawing';
+import { BENCH_BOTTOM, REST_BOTTOM, benchMarkup, groundMarkup } from './drawing';
 import { FRAGMENTS, PART_BY_KEY, PART_LIST, type Fragment } from './parts';
 import './bike.css';
 
@@ -29,6 +29,8 @@ export interface ExplodedBikeProps {
   /** Where "Related lesson" links point, once lessons exist. */
   lessonHref?: string;
   onSelect?: (key: string | null) => void;
+  /** Stand the bike on a workbench that runs to the host's edges (clip it there). Default false. */
+  bench?: boolean;
   className?: string;
 }
 
@@ -101,10 +103,11 @@ function InfoCard({ partKey, lessonHref }: { partKey: string; lessonHref?: strin
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, className }: ExplodedBikeProps) {
+export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
+  const benchRef = useRef<SVGGElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const partRefs = useRef<(SVGGElement | null)[]>([]);
   const pointerDown = useRef(false);
@@ -145,9 +148,18 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     const svg = svgRef.current!, root = rootRef.current!;
     if (typeof root.getBBox !== 'function') return;
     const aspect = svg.clientWidth && svg.clientHeight ? svg.clientWidth / svg.clientHeight : 1.6;
-    const vb = fitViewBox(root.getBBox(), progress, aspect);
+    const { x, y, width, height } = root.getBBox(); // an SVGRect: its fields are getters, so copy them out
+    let box = { x, y, width, height };
+    if (bench) {
+      // Parts that fall as the bike comes apart land on the worktop, never inside the bench:
+      // the bench drops to stay under the lowest part. Always show a strip of the bench front.
+      const drop = Math.max(0, y + height - REST_BOTTOM);
+      benchRef.current?.setAttribute('transform', drop ? `translate(0 ${Math.round(drop)})` : '');
+      box = { x, y, width, height: Math.max(height, BENCH_BOTTOM + drop - y) };
+    }
+    const vb = fitViewBox(box, progress, aspect, bench);
     if (vb) svg.setAttribute('viewBox', vb.join(' '));
-  }, [progress, size]);
+  }, [progress, size, bench]);
 
   const docked = size.w > 0 && size.w < DOCK_BELOW;
 
@@ -229,6 +241,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           aria-label="Road bike diagram, drawn from the drive side"
           {...pointerHandlers}
         >
+          {bench && <g ref={benchRef} className="bx-bench" data-testid="bx-bench" dangerouslySetInnerHTML={{ __html: benchMarkup }} />}
           <g ref={rootRef} className="bx-root">
             <g className="bx-ground" style={{ opacity: clamp(1 - progress * 3) }} dangerouslySetInnerHTML={{ __html: groundMarkup }} />
             {FRAGMENTS.map((f) => {

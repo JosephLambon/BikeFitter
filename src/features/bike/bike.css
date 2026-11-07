@@ -22,6 +22,14 @@
 .bx .bx-shadow { fill: var(--bx-shadow); }
 .bx .bx-groundline { stroke: var(--bx-ground); stroke-width: 1px; vector-effect: non-scaling-stroke; fill: none; }
 .bx-ground { transition: opacity .2s linear; }
+.bx-bench { pointer-events: none; }
+.bx .bx-bench-top { fill: var(--bx-bench-top); stroke: var(--bx-bench-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.bx .bx-bench-front { fill: var(--bx-bench-front); stroke: var(--bx-bench-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+
+/* Materials: tan-wall tyres and honey leather saddle and bar tape (alloy is --bx-metal).
+   :where() keeps these weaker than selection, so other parts still ghost when one is selected. */
+:where(.bx) .bx-part:where([data-part="tyre"]):not(.is-active) { --bx-dark: var(--bx-tyre); --bx-dark-hi: var(--bx-tyre-hi); }
+:where(.bx) .bx-part:where([data-part="saddle"], [data-part="tape"]):not(.is-active) { --bx-dark: var(--bx-leather); --bx-dark-hi: var(--bx-leather-hi); }
 
 /* Selection: the selected part goes amber; everything else ghosts */
 .bx-part { transition: opacity .25s ease; }

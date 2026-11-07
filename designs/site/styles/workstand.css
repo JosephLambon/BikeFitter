@@ -259,9 +259,11 @@
   & .next .actions { justify-content: center; gap: 12px; }
   & .next .more { background: var(--bg); }
 
-  /* Bike drawing: crisp ink lines; the selected part takes the bike's amber */
+  /* Bike drawing: crisp ink lines, tan-wall tyres, honey leather and polished alloy;
+     the selected part takes the bike's amber */
   & .bx {
-    --bx-frame: #ffffff; --bx-frame-hi: #f0f0ec; --bx-dark: #f4f4f1; --bx-dark-hi: #e6e6e1; --bx-metal: #fafaf8; --bx-metal-hi: #eaeae5;
+    --bx-frame: #ffffff; --bx-frame-hi: #f0f0ec; --bx-dark: #f4f4f1; --bx-dark-hi: #e6e6e1; --bx-metal: #e2e5e7; --bx-metal-hi: #c3c8cc;
+    --bx-tyre: #dcc29d; --bx-tyre-hi: #b48d5a; --bx-leather: #b98a55; --bx-leather-hi: #d2a876;
     --bx-spoke: rgba(26, 26, 25, .28); --bx-wire: rgba(26, 26, 25, .78); --bx-teeth: rgba(26, 26, 25, .5);
     --bx-chain: #f4f4f1; --bx-chain-hi: rgba(26, 26, 25, .4); --bx-hole: #ffffff;
     --bx-outline: rgba(26, 26, 25, .78); --bx-outline-w: 1px;
@@ -271,7 +273,8 @@
     --bx-lift: drop-shadow(0 6px 10px rgba(0, 0, 0, .14));
   }
   &[data-theme="dark"] .bx {
-    --bx-frame: #232323; --bx-frame-hi: #2f2f2f; --bx-dark: #1b1b1b; --bx-dark-hi: #2a2a2a; --bx-metal: #262626; --bx-metal-hi: #333333;
+    --bx-frame: #232323; --bx-frame-hi: #2f2f2f; --bx-dark: #1b1b1b; --bx-dark-hi: #2a2a2a; --bx-metal: #3b3e41; --bx-metal-hi: #4c5054;
+    --bx-tyre: #8c7050; --bx-tyre-hi: #a98a62; --bx-leather: #86613a; --bx-leather-hi: #a47b4d;
     --bx-spoke: rgba(237, 237, 234, .28); --bx-wire: rgba(237, 237, 234, .75); --bx-teeth: rgba(237, 237, 234, .5);
     --bx-chain: #1b1b1b; --bx-chain-hi: rgba(237, 237, 234, .4); --bx-hole: #151515;
     --bx-outline: rgba(237, 237, 234, .72);
@@ -279,6 +282,9 @@
     --bx-ghost: #191919; --bx-ghost-hi: #1d1d1d; --bx-ghost-line: rgba(237, 237, 234, .09); --bx-ghost-outline: rgba(237, 237, 234, .14);
     --bx-shadow: transparent; --bx-ground: rgba(237, 237, 234, .14); --bx-lift: drop-shadow(0 6px 12px rgba(0, 0, 0, .5));
   }
+  /* :where() keeps the materials weaker than selection, so other parts still ghost. */
+  & :where(.bx-part[data-part="tyre"]):not(.is-active) { --bx-dark: var(--bx-tyre); --bx-dark-hi: var(--bx-tyre-hi); }
+  & :where(.bx-part[data-part="saddle"], .bx-part[data-part="tape"]):not(.is-active) { --bx-dark: var(--bx-leather); --bx-dark-hi: var(--bx-leather-hi); }
   & .hero-figure .bx, & .figure .bx { --bx-hole: var(--bg); }
   & .bx-card { background: var(--bg); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; font-size: 14px; line-height: 1.5; }
   & .bx-card-sys { display: inline-block; margin: 0 0 8px; padding: 2px 8px; border-radius: 6px; background: var(--bike-tint); color: var(--bike); font-size: 12px; font-weight: 600; }

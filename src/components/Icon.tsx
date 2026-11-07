@@ -15,6 +15,8 @@ const PATHS = {
   research: <path d="M12 3.5 20.5 12 12 20.5 3.5 12z" />,
   expert: <circle cx="12" cy="12" r="8" />,
   thumb: <path d="M12 4 21 19.5H3z" />,
+  expand: <path d="M14.5 4H20v5.5M20 4l-6 6M9.5 20H4v-5.5M4 20l6-6" />,
+  collapse: <path d="M20 4l-6 6M14 4.5V10h5.5M4 20l6-6M10 19.5V14H4.5" />,
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.6v.1" /></>,
 } as const;
 

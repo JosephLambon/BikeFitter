@@ -31,6 +31,11 @@ describe('fitViewBox', () => {
     expect(h).toBe(448);
     expect(y).toBe(-174);
   });
+  it('puts the extra height above the drawing when anchored to the bottom', () => {
+    const [, y, , h] = fitViewBox({ x: 0, y: 0, width: 400, height: 100 }, 0, 1, true)!;
+    expect(h).toBe(448);
+    expect(y + h).toBe(124); // bottom edge stays 24 px below the drawing
+  });
   it('adds more room as the bike comes apart', () => {
     expect(fitViewBox({ x: 0, y: 0, width: 100, height: 100 }, 1, 1)![2]).toBe(220);
   });

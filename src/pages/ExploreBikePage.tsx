@@ -5,23 +5,16 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Icon } from '../components/Icon';
-import { Eyebrow, SectionHead, Wrap } from '../components/layout';
+import { Wrap } from '../components/layout';
 import { ExplodedBike } from '../features/bike/ExplodedBike';
-import { caughtUp, clamp, headBlend, reelProgress, sliderText } from '../features/bike/explode';
-import { motion } from '../theme/tokens';
+import { caughtUp, clamp, headBlend, reelProgress } from '../features/bike/explode';
+import { ExplodeScrubber, SCRUBBER_H } from '../features/bike/ExplodeScrubber';
+import { benchWall, motion } from '../theme/tokens';
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
-
-const FACTS = [
-  { title: 'Seven systems', body: 'Frame, fork, cockpit, contact points, drivetrain, brakes and wheels, plus a bottle cage.' },
-  { title: 'Three contact points', body: 'You touch the bike at the saddle, the handlebar and the pedals. These are where fit is set.' },
-  { title: 'UK names', body: 'Parts use UK terms, such as chainset and rear mech. The glossary will list the US names too.' },
-];
 
 function useExplodeStage(reelRef: RefObject<HTMLElement | null>, reduce: boolean) {
   const [progress, setProgress] = useState(0);
@@ -74,8 +67,10 @@ export function ExploreBikePage() {
   const reduce = useMediaQuery(REDUCED, { noSsr: true });
   const reelRef = useRef<HTMLElement>(null);
   const { progress, fromSlider, toggle } = useExplodeStage(reelRef, reduce);
-  const t = headBlend(progress, reduce);
-  const pc = Math.round(progress * 100);
+  const canHover = useMediaQuery('(hover: hover)', { noSsr: true });
+  // Reduced motion: no cue to scroll, so the hint shows from the start.
+  const t = reduce ? 1 : headBlend(progress, false);
+  const apart = progress > 0.5;
 
   return (
     <Box component="main" id="main" data-pillar="bike">
@@ -96,28 +91,46 @@ export function ExploreBikePage() {
             [`@media ${REDUCED}`]: { position: 'relative', height: 'auto', minHeight: '100vh', pt: '32px' },
           }}
         >
-          <Wrap sx={{ display: 'grid', textAlign: 'center', '& > *': { gridArea: '1 / 1' }, '& .dek': { fontSize: 18, lineHeight: 1.45, color: 'var(--ink-2)', mx: 'auto', maxWidth: '30em', mb: '28px' } }}>
-            <div style={{ opacity: 1 - t, transform: `translateY(${-16 * t}px)` }}>
-              <Eyebrow>Explore the bike</Eyebrow>
-              <Typography variant="h1" id="bike-h" sx={{ m: '0 0 20px' }}>What every part of a road bike&nbsp;does.</Typography>
-              <p className="dek">
-                {reduce ? 'Press Take it apart, or use the slider, to see how a road bike fits together.' : 'Scroll down, or press Take it apart, to see how a road bike fits together.'}
-                {' '}Then select any part to find out what it does.
-              </p>
-            </div>
-            {!reduce && (
-              <div aria-hidden="true" style={{ opacity: t, transform: `translateY(${16 * (1 - t)}px)`, pointerEvents: 'none' }}>
-                <Eyebrow>Explore the bike</Eyebrow>
-                <Typography component="p" variant="h1" sx={{ m: '0 0 20px' }}>Select any part.</Typography>
-                <p className="dek">Hover over it or tap it. You can also press <kbd>Tab</kbd>, then use the arrow keys. Parts that affect your fit say why.</p>
-              </div>
-            )}
+          <Wrap sx={{ textAlign: 'center' }}>
+            <Typography variant="h1" id="bike-h" sx={{ m: 0 }}>Explore your bike’s anatomy.</Typography>
+            {/* The bouncing scroll cue turns into the hint as the bike starts to come apart. */}
+            <Box sx={{ display: 'grid', placeItems: 'center', mt: '12px', minHeight: 32, '& > *': { gridArea: '1 / 1' } }}>
+              {!reduce && (
+                <Box
+                  aria-hidden="true" data-testid="scroll-cue"
+                  style={{ opacity: 1 - t, transform: `translateY(${-10 * t}px) scale(${1 - 0.4 * t})` }}
+                  sx={{ display: 'inline-flex', color: 'var(--tone)', fontSize: 28, pointerEvents: 'none' }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex', animation: `bf-bob 2.4s ${motion.rise} infinite`,
+                      '@keyframes bf-bob': { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(6px)' } },
+                      '& .ico': { transform: 'rotate(90deg)' },
+                    }}
+                  >
+                    <Icon name="arrow" />
+                  </Box>
+                </Box>
+              )}
+              <Typography
+                component="p" data-testid="part-hint"
+                style={{ opacity: t, transform: `translateY(${10 * (1 - t)}px)` }}
+                sx={{ m: 0, fontSize: 'clamp(19px, 1.9vw, 22px)', lineHeight: 1.4, color: 'var(--ink-2)' }}
+              >
+                {canHover ? 'Hover a part to learn more.' : 'Tap a part to learn more.'}
+              </Typography>
+            </Box>
           </Wrap>
 
           <Box
             className="stage-bike"
             sx={{
-              position: 'relative', minHeight: 0, width: 'min(1320px, 100% - 32px)', mx: 'auto',
+              // The workbench: amber dots on a white wall, with the bench drawn under the tyres.
+              position: 'relative', minHeight: 0, width: 'min(1320px, 100% - 32px)', mx: 'auto', mt: '24px',
+              p: '24px 24px 0', borderRadius: '20px', overflow: 'hidden', background: benchWall,
+              boxShadow: 'inset 0 0 0 1px var(--bench-line)',
+              '@media (max-width: 760px)': { borderRadius: '16px', p: '16px 12px 0' },
               '& .bx, & .bx-stage': { height: '100%' },
               [`@media ${REDUCED}`]: { height: '60vh', '& .bx-card:not(:empty)': { animation: 'none' } },
               // On phones the card covers the heading area, never the controls.
@@ -132,51 +145,26 @@ export function ExploreBikePage() {
               '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
             }}
           >
-            <ExplodedBike progress={progress} />
+            <ExplodedBike progress={progress} bench />
           </Box>
 
           <Box
             sx={{
-              display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '16px 20px',
-              width: 'min(680px, 100% - 32px)', mx: 'auto', mt: '12px', p: '10px 12px', borderRadius: '14px', background: 'var(--surface)',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              width: 'min(560px, 100% - 32px)', mx: 'auto', mt: '12px',
             }}
           >
-            <Button variant="quiet" startIcon={<Icon name="bike" />} onClick={toggle}>
-              {progress > 0.5 ? 'Put it back together' : 'Take it apart'}
+            <Button
+              variant="quiet" onClick={toggle}
+              aria-label={apart ? 'Put the bike back together' : 'Take the bike apart'}
+              title={apart ? 'Put the bike back together' : 'Take the bike apart'}
+              sx={{ flex: 'none', minWidth: 0, width: SCRUBBER_H, height: SCRUBBER_H, p: 0, fontSize: 22 }}
+            >
+              <Icon name={apart ? 'collapse' : 'expand'} />
             </Button>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 260px', fontSize: 13, color: 'var(--ink-3)' }}>
-              <span aria-hidden="true">Together</span>
-              <Slider
-                value={pc}
-                min={0} max={100}
-                onChange={(_e, v) => fromSlider((v as number) / 100)}
-                getAriaValueText={() => sliderText(progress)}
-                slotProps={{ input: { 'aria-label': 'How far apart the bike is' } }}
-                sx={{ flex: 1, minWidth: 0 }}
-              />
-              <span aria-hidden="true">Apart</span>
-              <Box component="span" aria-hidden="true" data-testid="explode-pc" sx={{ fontFamily: 'var(--f-mono)', fontSize: 13, background: 'var(--bg)', borderRadius: '6px', p: '2px 6px', color: 'var(--ink)', minWidth: '4.2ch', textAlign: 'center' }}>
-                {String(pc).padStart(2, '0')}%
-              </Box>
-            </Box>
+            <ExplodeScrubber progress={progress} onChange={fromSlider} />
           </Box>
         </Box>
-      </Box>
-
-      <Box component="section" aria-labelledby="about-h" sx={{ py: '112px', '@media (max-width: 760px)': { py: '80px' } }}>
-        <Wrap>
-          <SectionHead label="The drawing" title="What you’re looking at." id="about-h">
-            A modern road bike with disc brakes, drawn from the drive side: the side with the chain. Its proportions come from a real mid-size endurance frame.
-          </SectionHead>
-          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, '@media (max-width: 980px)': { gridTemplateColumns: '1fr' } }}>
-            {FACTS.map((f) => (
-              <Card component="li" key={f.title} sx={{ p: 3 }}>
-                <Typography variant="h3" sx={{ m: '0 0 6px' }}>{f.title}</Typography>
-                <Typography sx={{ m: 0, fontSize: 15, color: 'var(--ink-2)' }}>{f.body}</Typography>
-              </Card>
-            ))}
-          </Box>
-        </Wrap>
       </Box>
     </Box>
   );
