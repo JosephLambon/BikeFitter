@@ -207,6 +207,63 @@ test.describe('Zoom on desktop', () => {
   });
 });
 
+test.describe('Reset zoom', () => {
+  test('zooms back out with a short animation, not a jump', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/bike');
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.waitForTimeout(300); // fonts and layout settle
+    const whole = await viewBox(page);
+    await page.keyboard.down('Control');
+    for (let i = 0; i < 4; i++) await page.mouse.wheel(0, -60);
+    await page.keyboard.up('Control');
+    const reset = page.getByRole('button', { name: 'Reset zoom' });
+    await expect(reset).toBeVisible();
+    const zoomedW = +(await viewBox(page))!.split(' ')[2];
+
+    await page.evaluate(() => {
+      const w = window as unknown as { frames: [number, number][] };
+      w.frames = [];
+      const svg = document.querySelector('.bx-svg')!, t0 = performance.now();
+      const tick = () => {
+        w.frames.push([performance.now() - t0, +svg.getAttribute('viewBox')!.split(' ')[2]]);
+        if (performance.now() - t0 < 800) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    // A real mouse click: Playwright's click() can scroll the sticky reel, which explodes the bike.
+    const rb = (await reset.boundingBox())!;
+    await page.mouse.click(rb.x + rb.width / 2, rb.y + rb.height / 2);
+    await expect(reset).toHaveCount(0); // the chip goes at once
+    await page.waitForTimeout(850);
+    const frames = await page.evaluate(() => (window as unknown as { frames: [number, number][] }).frames);
+    const widths = frames.map(([, w]) => w);
+    const wholeW = +whole!.split(' ')[2];
+    const between = widths.filter((x) => x > zoomedW + 1 && x < wholeW - 1);
+    expect(between.length).toBeGreaterThanOrEqual(3); // several frames in between: an animation
+    for (let i = 1; i < widths.length; i++) expect(widths[i]).toBeGreaterThanOrEqual(widths[i - 1]); // only ever zooms out
+    const first = frames.find(([, w]) => w > zoomedW + 1)!, last = frames.find(([, w]) => w >= wholeW - 0.1)!;
+    expect(last).toBeDefined();
+    expect(last[0] - first[0]).toBeLessThan(400); // and snappy
+    expect(await viewBox(page)).toBe(whole);
+  });
+
+  test('is instant with reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/bike');
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.waitForTimeout(300); // fonts and layout settle
+    const whole = await viewBox(page);
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -120);
+    await page.keyboard.up('Control');
+    await page.getByRole('button', { name: 'Reset zoom' }).click();
+    expect(await viewBox(page)).toBe(whole);
+  });
+});
+
 test.describe('Phone, portrait', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 

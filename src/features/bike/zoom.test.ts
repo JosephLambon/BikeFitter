@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IDENTITY, MAX_ZOOM, panBy, zoomAt, zoomViewBox } from './zoom';
+import { IDENTITY, MAX_ZOOM, panBy, zoomAt, zoomBetween, zoomViewBox } from './zoom';
 
 const base: [number, number, number, number] = [0, 0, 400, 200];
 
@@ -32,5 +32,18 @@ describe('diagram zoom', () => {
   it('follows the drawing when the base view changes (the bike comes apart)', () => {
     const z = zoomAt(IDENTITY, 2, 1, 1);
     expect(zoomViewBox([100, 100, 800, 400], z)).toEqual([500, 300, 400, 200]);
+  });
+});
+
+describe('zooming back out', () => {
+  const from = { s: 2.5, fx: 0.3, fy: 0.4 };
+  it('starts where it was and ends at the whole drawing', () => {
+    expect(zoomBetween(from, IDENTITY, 0)).toEqual(from);
+    expect(zoomBetween(from, IDENTITY, 1)).toEqual(IDENTITY);
+  });
+  it('widens the view steadily, never past the whole drawing', () => {
+    const widths = [0, 0.25, 0.5, 0.75, 1].map((k) => zoomViewBox(base, zoomBetween(from, IDENTITY, k))[2]);
+    for (let i = 1; i < widths.length; i++) expect(widths[i]).toBeGreaterThan(widths[i - 1]);
+    expect(widths[2]).toBeCloseTo((400 / 2.5 + 400) / 2, 0); // halfway in width at halfway
   });
 });

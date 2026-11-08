@@ -12,7 +12,7 @@ import { SOURCES } from '../../content/sources';
 import type { Build } from './build';
 import { clamp, ease, explodeOffset, fitViewBox, placeCard, type Box as VBox, type Rect } from './explode';
 import { separate, type Piece } from './layout';
-import { IDENTITY, TAP_ZOOM, isZoomed, panBy, zoomAt, zoomViewBox, type ViewBox, type Zoom } from './zoom';
+import { IDENTITY, TAP_ZOOM, ZOOM_OUT_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
 import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, type Pt } from './drawing';
 import { FRAGMENTS, PARTS, drawnFragments, inBuild, partInfo, partsFor, unitOf, type Fragment, type PartDef, type Swap } from './parts';
 import { motion } from '../../theme/tokens';
@@ -251,16 +251,38 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   const applyView = useCallback(() => {
     if (baseVb.current) svgRef.current?.setAttribute('viewBox', zoomViewBox(baseVb.current, zoom.current).join(' '));
   }, []);
+  const zoomAnim = useRef(0);
+  const stopZoomAnim = useCallback(() => { if (zoomAnim.current) { cancelAnimationFrame(zoomAnim.current); zoomAnim.current = 0; } }, []);
   const commitZoom = useCallback((z: Zoom) => {
+    stopZoomAnim();
     zoom.current = isZoomed(z) ? z : IDENTITY;
     applyView();
     setZoomed(isZoomed(zoom.current));
     setZoomTick((n) => n + 1);
-  }, [applyView]);
+  }, [applyView, stopZoomAnim]);
 
   /* The build: which parts are on the bike, which are leaving, and how deep the rims are. */
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
   const motionOk = !reduce && canAnimate();
+
+  /* Back to the whole bike: a quick ease-out zoom, not a jump. The Reset chip goes at once. */
+  const zoomOut = useCallback(() => {
+    if (!motionOk || !isZoomed(zoom.current)) { commitZoom(IDENTITY); return; }
+    stopZoomAnim();
+    const from = zoom.current;
+    setZoomed(false);
+    let start: number | null = null;
+    const step = (ts: number) => {
+      if (start === null) start = ts;
+      const k = clamp((ts - start) / ZOOM_OUT_MS);
+      if (k >= 1) { zoomAnim.current = 0; commitZoom(IDENTITY); return; }
+      zoom.current = zoomBetween(from, IDENTITY, 1 - Math.pow(1 - k, 3));
+      applyView();
+      zoomAnim.current = requestAnimationFrame(step);
+    };
+    zoomAnim.current = requestAnimationFrame(step);
+  }, [motionOk, commitZoom, stopZoomAnim, applyView]);
+  useEffect(() => stopZoomAnim, [stopZoomAnim]);
   const targetDepth = build?.rims === 'deep' ? 1 : 0;
   const [depth, setDepth] = useState(targetDepth);
   const [seen, setSeen] = useState(build);
@@ -402,6 +424,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     let lastTap: { t: number; x: number; y: number } | null = null;
     let multi = false;
     const onStart = (e: TouchEvent) => {
+      stopZoomAnim();
       if (e.touches.length >= 2) {
         e.preventDefault();
         multi = true; pan = null;
@@ -441,20 +464,22 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       if (lastTap && now - lastTap.t < 320 && Math.hypot(t.clientX - lastTap.x, t.clientY - lastTap.y) < 32) {
         e.preventDefault(); // a double-tap zooms; it doesn't also select
         const f = frac(t.clientX, t.clientY);
-        commitZoom(isZoomed(zoom.current) ? IDENTITY : zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
+        if (isZoomed(zoom.current)) zoomOut();
+        else commitZoom(zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
         lastTap = null;
       } else lastTap = { t: now, x: t.clientX, y: t.clientY };
     };
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
+      stopZoomAnim();
       const f = frac(e.clientX, e.clientY);
       commitZoom(zoomAt(zoom.current, zoom.current.s * Math.exp(-e.deltaY * 0.01), f.fx, f.fy));
     };
     /* Mouse and pen: once zoomed, drag the drawing by hand. A drag never also selects a part. */
     let drag: { id: number; x: number; y: number; z: Zoom; moved: boolean } | null = null;
     const onDown = (e: globalThis.PointerEvent) => {
-      if (e.pointerType === 'touch' || e.button !== 0 || !isZoomed(zoom.current)) return;
+      if (e.pointerType === 'touch' || e.button !== 0 || zoomAnim.current || !isZoomed(zoom.current)) return;
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY, z: zoom.current, moved: false };
     };
     const onDragMove = (e: globalThis.PointerEvent) => {
@@ -493,7 +518,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       svg.removeEventListener('pointerdown', onDown); svg.removeEventListener('pointermove', onDragMove);
       svg.removeEventListener('pointerup', onUp); svg.removeEventListener('pointercancel', onUp);
     };
-  }, [zoomable, applyView, commitZoom]);
+  }, [zoomable, applyView, commitZoom, zoomOut, stopZoomAnim]);
 
 
   /* Play the swap: departures first, then arrivals; leaving parts are dropped once they have gone. */
@@ -722,7 +747,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           )}
         </svg>
         {zoomable && zoomed && (
-          <button type="button" className="bx-zoom-reset" onClick={() => commitZoom(IDENTITY)}>Reset zoom</button>
+          <button type="button" className="bx-zoom-reset" onClick={zoomOut}>Reset zoom</button>
         )}
       </div>
       {docked ? (cardHost ? createPortal(card, cardHost) : null) : card}
