@@ -20,6 +20,6 @@ describe('bike build options', () => {
   });
 
   it.each(BUILD_OPTIONS.flatMap((o) => o.choices.map((c) => [o.label + ': ' + c.label, c] as const)))('%s uses British English', (_n, c) => {
-    expect([c.label, c.name, c.note].join(' ')).not.toMatch(US);
+    expect([c.label, c.name].join(' ')).not.toMatch(US);
   });
 });

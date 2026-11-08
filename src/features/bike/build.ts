@@ -18,10 +18,8 @@ export interface BuildChoice<K extends BuildKey = BuildKey> {
   value: Build[K];
   /** Short label for a segmented control or chip. */
   label: string;
-  /** The choice in a sentence, shown as it is fitted ("Rim brakes fitted."). */
+  /** The choice in a sentence, announced to screen readers as it is fitted ("Rim brakes fitted."). */
   name: string;
-  /** One line on what changes on the bike. */
-  note: string;
 }
 export interface BuildOption<K extends BuildKey = BuildKey> {
   key: K;
@@ -33,24 +31,24 @@ const option = <K extends BuildKey>(o: BuildOption<K>) => o;
 
 export const BUILD_OPTIONS = [
   option({ key: 'gears', label: 'Gears', choices: [
-    { value: 'mechanical', label: 'Mechanical', name: 'Mechanical gears', note: 'Steel cables pull the mechs when you change gear.' },
-    { value: 'electronic', label: 'Electronic', name: 'Electronic gears', note: 'Buttons send a signal to small motors in the mechs. No gear cables.' },
+    { value: 'mechanical', label: 'Mechanical', name: 'Mechanical gears' },
+    { value: 'electronic', label: 'Electronic', name: 'Electronic gears' },
   ] }),
   option({ key: 'brakes', label: 'Brakes', choices: [
-    { value: 'disc', label: 'Disc', name: 'Disc brakes', note: 'Pads grip a rotor on each hub. Wheels are held by thru-axles.' },
-    { value: 'rim', label: 'Rim', name: 'Rim brakes', note: 'Pads grip the sides of the rim. Wheels are held by quick-release skewers.' },
+    { value: 'disc', label: 'Disc', name: 'Disc brakes' },
+    { value: 'rim', label: 'Rim', name: 'Rim brakes' },
   ] }),
   option({ key: 'rims', label: 'Rims', choices: [
-    { value: 'shallow', label: 'Shallow', name: 'Shallow rims', note: 'A low rim with longer spokes. Usually lighter.' },
-    { value: 'deep', label: 'Deep', name: 'Deep-section rims', note: 'A taller rim with shorter spokes. Can be more aerodynamic.' },
+    { value: 'shallow', label: 'Shallow', name: 'Shallow rims' },
+    { value: 'deep', label: 'Deep', name: 'Deep-section rims' },
   ] }),
   option({ key: 'chainrings', label: 'Chainrings', choices: [
-    { value: 'double', label: 'Two (2×)', name: 'Two chainrings', note: 'A front mech moves the chain between two rings.' },
-    { value: 'single', label: 'One (1×)', name: 'One chainring', note: 'A single ring and no front mech. All the gears are at the back.' },
+    { value: 'double', label: 'Two (2×)', name: 'Two chainrings' },
+    { value: 'single', label: 'One (1×)', name: 'One chainring' },
   ] }),
   option({ key: 'mudguards', label: 'Mudguards', choices: [
-    { value: 'off', label: 'Off', name: 'No mudguards', note: 'Lighter and simpler, but you get the spray.' },
-    { value: 'on', label: 'On', name: 'Mudguards', note: 'Keep road spray off you and the bike. The frame needs mounts and clearance.' },
+    { value: 'off', label: 'Off', name: 'No mudguards' },
+    { value: 'on', label: 'On', name: 'Mudguards' },
   ] }),
 ] as const satisfies readonly BuildOption[];
 

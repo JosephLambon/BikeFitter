@@ -1,21 +1,19 @@
 /* The build tray on Explore the bike: swap common road-bike variations (build.ts) and watch the
    exploded bike change. A "Build" button in the explode controls opens a tray of shelf cards
-   above them, one per option, each with a Workstand segmented control. Under the cards, one line
-   says what the last change did. The tray collapses smoothly, is inert while closed, announces
-   each change to screen readers and never moves the page. */
+   above them, one per option, each with a Workstand segmented control. The tray collapses
+   smoothly, is inert while closed and never moves the page; the page announces each change to
+   screen readers. */
 import Box from '@mui/material/Box';
 import { Icon } from '../../components/Icon';
 import { Segmented } from '../../components/Segmented';
 import { motion } from '../../theme/tokens';
 import { SCRUBBER_H } from './ExplodeScrubber';
-import { BUILD_OPTIONS, DEFAULT_BUILD, changedKeys, choiceOf, type Build, type BuildKey } from './build';
+import { BUILD_OPTIONS, DEFAULT_BUILD, changedKeys, type Build, type BuildKey } from './build';
 
 export interface BuildTrayProps {
   build: Build;
   onChange: (key: BuildKey, value: Build[BuildKey]) => void;
   open: boolean;
-  /** The option changed last, if any: its note is shown under the cards. */
-  last?: BuildKey;
   /** The id the toggle's aria-controls points at. */
   id: string;
   /** One card per row at any width, filling its container (the phone panel). */
@@ -25,18 +23,6 @@ export interface BuildTrayProps {
 }
 
 const REDUCED = '@media (prefers-reduced-motion: reduce)';
-
-/** Text that rises into place whenever it changes. */
-const Roll = ({ children }: { children: string }) => (
-  <Box component="span" sx={{ display: 'inline-grid', overflow: 'hidden', verticalAlign: 'bottom' }}>
-    <Box
-      component="span" key={children}
-      sx={{ animation: `bt-roll .45s ${motion.rise} both`, '@keyframes bt-roll': { from: { transform: 'translateY(70%)', opacity: 0 } }, [REDUCED]: { animation: 'none' } }}
-    >
-      {children}
-    </Box>
-  </Box>
-);
 
 /** Opens and closes the tray. Shows how many options differ from the standard build. */
 export function BuildToggle({ open, onOpenChange, build, controls, opensDown = false }: { open: boolean; onOpenChange: (open: boolean) => void; build: Build; controls: string; /** The tray sits below the button (portrait phones). */ opensDown?: boolean }) {
@@ -75,9 +61,8 @@ export function BuildToggle({ open, onOpenChange, build, controls, opensDown = f
   );
 }
 
-export function BuildTray({ build, onChange, open, last, id, stacked = false, inline = false }: BuildTrayProps) {
+export function BuildTray({ build, onChange, open, id, stacked = false, inline = false }: BuildTrayProps) {
   const row = { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center', p: '8px' };
-  const note = last ? choiceOf(last, build).name + '. ' + choiceOf(last, build).note : 'Swap a part and watch the bike change.';
   return (
     <Box
       id={id} data-open={open} inert={!open} data-testid="build-tray"
@@ -124,9 +109,6 @@ export function BuildTray({ build, onChange, open, last, id, stacked = false, in
               </Box>
             );
           })}
-        </Box>
-        <Box component="p" sx={{ m: '10px 0 2px', px: '4px', fontSize: 13, lineHeight: 1.45, color: 'var(--ink-2)', minHeight: '1.45em' }}>
-          <Roll>{note}</Roll>
         </Box>
       </Box>
     </Box>

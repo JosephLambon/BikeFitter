@@ -27,6 +27,42 @@ function overlaps(page: Page) {
   });
 }
 
+/** Where the scrubber's cable ends, its grip (the slider thumb) and the nudge arrow sit, in
+    page px. The grip and the arrow belong on the cable's end, on the track's centre line. */
+function scrubberEnds(page: Page) {
+  return page.evaluate(() => {
+    const box = document.querySelector<HTMLElement>('[data-scrubber="cable"]')!;
+    const svg = box.querySelector('svg')!;
+    const path = svg.querySelector('path')!;
+    const p = path.getPointAtLength(path.getTotalLength()).matrixTransform(svg.getScreenCTM()!);
+    const mid = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    const t = box.querySelector('.MuiSlider-thumb')!.getBoundingClientRect();
+    const nudge = box.querySelector('[data-testid="scrubber-nudge"]');
+    const b = box.getBoundingClientRect();
+    return { cable: { x: p.x, y: p.y }, grip: mid(t), nudge: nudge ? mid(nudge.getBoundingClientRect()) : null, centreY: b.top + b.height / 2 };
+  });
+}
+
+async function expectScrubberAligned(page: Page) {
+  const slider = page.getByRole('slider', { name: 'How far apart the bike is' });
+  for (const v of [0, 40, 100]) {
+    await slider.evaluate((el, n) => {
+      const input = el as HTMLInputElement;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, String(n));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, v);
+    await expect(slider).toHaveAttribute('aria-valuenow', String(v));
+    const e = await scrubberEnds(page);
+    expect(Math.abs(e.cable.y - e.centreY), `cable end on the centre line at ${v}%`).toBeLessThanOrEqual(1);
+    expect(Math.abs(e.grip.y - e.cable.y), `grip level with the cable end at ${v}%`).toBeLessThanOrEqual(1);
+    expect(Math.abs(e.grip.x - e.cable.x), `grip on the cable end at ${v}%`).toBeLessThanOrEqual(2);
+    if (v === 0) {
+      expect(e.nudge, 'the nudge arrow shows while together').not.toBeNull();
+      expect(Math.abs(e.nudge!.y - e.cable.y), 'nudge arrow level with the cable end').toBeLessThanOrEqual(1);
+    }
+  }
+}
+
 async function takeApart(page: Page) {
   await page.getByRole('button', { name: 'Take the bike apart' }).click();
   await expect(page.getByRole('slider', { name: 'How far apart the bike is' })).toHaveAttribute('aria-valuetext', 'Fully apart');
@@ -133,7 +169,10 @@ test.describe('Info card rule', () => {
       expect(c.height).toBeGreaterThan(120);
       expect(c.x).toBeGreaterThanOrEqual(0);
       expect(c.x + c.width).toBeLessThanOrEqual(w);
-      expect(c.y + c.height).toBeLessThanOrEqual(900);
+      // The card, or (on phones) the drawer it scrolls in, is wholly on screen.
+      const drawer = page.getByTestId('drawer');
+      const box = (await drawer.count()) ? (await drawer.boundingBox())! : c;
+      expect(box.y + box.height).toBeLessThanOrEqual(900);
       // Nothing clips it: every ancestor that clips its overflow contains the whole card.
       const clipped = await card.evaluate((el) => {
         const r = el.getBoundingClientRect(), out: string[] = [];
@@ -141,6 +180,8 @@ test.describe('Info card rule', () => {
           const cs = getComputedStyle(a);
           if (cs.display === 'none' || cs.visibility === 'hidden') out.push('hidden ' + a.className);
           if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+          // In the phone drawer the card scrolls inside the drawer's own scroll box, by design.
+          if (a.dataset.testid === 'card-slot' && cs.overflowY === 'auto') break;
           const b = a.getBoundingClientRect();
           if (r.left < b.left - 1 || r.right > b.right + 1 || r.top < b.top - 1 || r.bottom > b.bottom + 1) out.push(a.className);
         }
@@ -264,10 +305,28 @@ test.describe('Reset zoom', () => {
   });
 });
 
+test.describe('Explode scrubber', () => {
+  test('the grip and nudge arrow sit on the cable’s end, level with it, on a desktop', async ({ page }) => {
+    await page.goto('/bike');
+    await expectScrubberAligned(page);
+  });
+});
+
 test.describe('Phone, portrait', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 
   const viewBoxWidth = (page: Page) => page.locator('.bx-svg').evaluate((s) => +s.getAttribute('viewBox')!.split(' ')[2]);
+  /** A thumb swipe on the drawer's grab handle: negative dy is up. */
+  const swipeTab = async (page: Page, dy: number) => {
+    const cdp = await page.context().newCDPSession(page);
+    const t = (await page.getByTestId('drawer-tab').boundingBox())!;
+    const x = t.x + t.width / 2, y = t.y + 10;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+    for (let k = 1; k <= 5; k++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (dy * k) / 5, id: 1 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await cdp.detach();
+  };
+  const drawerHeight = async (page: Page) => (await page.getByTestId('drawer').boundingBox())!.height;
   const noScroll = (page: Page) => page.evaluate(() => {
     const st = document.querySelector('[data-testid="stage"]') as HTMLElement;
     return {
@@ -277,21 +336,38 @@ test.describe('Phone, portrait', () => {
     };
   });
 
-  test('title, stage in proportion to the bike, controls, then the panel with the cue and an invitation to turn the phone', async ({ page }) => {
+  test('title on white, then the bench wall with the bike near the top, the drawer tab, and the dock along the bottom', async ({ page }) => {
     await page.goto('/bike');
+    await expect(page.locator('[data-layout="drawer"]')).toBeAttached();
     const title = (await page.locator('#bike-h').boundingBox())!;
     const stage = (await page.getByTestId('stage').boundingBox())!;
+    const dock = (await page.getByTestId('dock').boundingBox())!;
     const slider = (await page.getByRole('slider', { name: 'How far apart the bike is' }).boundingBox())!;
-    const panel = (await page.getByTestId('panel').boundingBox())!;
-    expect(stage.height / stage.width).toBeGreaterThan(0.6);
-    expect(stage.height / stage.width).toBeLessThan(0.9);
     expect(title.y + title.height).toBeLessThanOrEqual(stage.y);
-    expect(stage.y + stage.height).toBeLessThanOrEqual(slider.y);
-    expect(slider.y + slider.height).toBeLessThanOrEqual(panel.y + 1);
-    expect(panel.height).toBeGreaterThan(200); // room for the card
-    await expect(page.getByTestId('panel').getByTestId('scroll-cue')).toBeVisible();
-    await expect(page.getByTestId('rotate-invite')).toHaveText('Turn your phone sideways for a bigger bike.');
+    expect(stage.height / stage.width).toBeCloseTo(0.75, 1); // in the bike's proportions, not the leftover height
+    const titleBg = await page.locator('#bike-h').evaluate((h) => getComputedStyle(h.parentElement!.parentElement!).backgroundColor);
+    expect(titleBg).toBe('rgb(255, 255, 255)');
+    expect(Math.abs(dock.y + dock.height - 844)).toBeLessThanOrEqual(1); // along the bottom of the screen
+    expect(slider.y).toBeGreaterThanOrEqual(dock.y);
+    // Open on load, on the guide, between the bike and the dock; no Show/Hide button.
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+    await expect(page.getByTestId('drawer-idle')).toBeInViewport();
+    await expect(page.getByTestId('part-hint')).toContainText('Tap a part to learn more.');
+    await expect(page.getByTestId('drawer').getByText(/^(Show|Hide)$/)).toHaveCount(0);
+    await page.waitForTimeout(600);
+    const d = (await page.getByTestId('drawer').boundingBox())!;
+    expect(d.y).toBeGreaterThanOrEqual(stage.y + stage.height);
+    expect(d.y + d.height).toBeLessThanOrEqual(dock.y);
+    const guide = await page.getByTestId('drawer-idle').evaluate((g) => g.scrollHeight <= g.clientHeight);
+    expect(guide).toBe(true); // the whole guide fits, nothing scrolls
+    await expect(page.getByTestId('scroll-cue')).toHaveCount(0); // scroll does nothing on a phone
+    await expect(page.getByTestId('rotate-invite')).toHaveCount(0);
     expect(await noScroll(page)).toEqual({ pageX: true, stage: true, zoom: 1 });
+  });
+
+  test('in the dock, the grip and nudge arrow sit on the cable’s end, level with it', async ({ page }) => {
+    await page.goto('/bike');
+    await expectScrubberAligned(page);
   });
 
   test('pinching zooms the drawing only: no page zoom, no scroll, no scrollbars', async ({ page }) => {
@@ -328,20 +404,113 @@ test.describe('Phone, portrait', () => {
     await expect.poll(() => viewBoxWidth(page)).toBe(before);
   });
 
-  test('tapping a thin part selects it, and the card docks in the panel below the controls', async ({ page }) => {
+  test('on a short phone the guide still fits the drawer, with nothing cut off', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/bike');
+    await page.waitForTimeout(600);
+    await expect(page.getByTestId('part-hint')).toBeInViewport();
+    expect(await page.getByTestId('drawer-idle').evaluate((g) => g.scrollHeight <= g.clientHeight)).toBe(true);
+    await expect(page.getByTestId('drawer-idle')).toContainText('Drag this panel down to hide it.');
+  });
+
+  test('tapping a thin part opens the drawer between the bike and the dock; a swipe down leaves a tab', async ({ page }) => {
     await page.goto('/bike');
     await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
     const card = page.getByRole('status');
     await expect(card).toContainText('Saddle');
-    const c = (await card.boundingBox())!, stage = (await page.getByTestId('stage').boundingBox())!;
-    expect(c.y).toBeGreaterThanOrEqual(stage.y + stage.height);
-    expect(c.y).toBeLessThan(844);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+    await page.waitForTimeout(600); // the drawer and stage settle
+    // The card scrolls inside the drawer, which fits between the stage and the dock.
+    const d = (await page.getByTestId('drawer').boundingBox())!, stage = (await page.getByTestId('stage').boundingBox())!, dock = (await page.getByTestId('dock').boundingBox())!;
+    expect(d.y).toBeGreaterThanOrEqual(stage.y + stage.height); // never over the drawing
+    expect(d.y + d.height).toBeLessThanOrEqual(dock.y);
+    await expect(page.getByRole('button', { name: 'Take the bike apart' })).toBeInViewport();
     await expect(page.getByTestId('rotate-invite')).toHaveCount(0);
+
+    const startY: number = await page.evaluate(() => window.scrollY);
+    await swipeTab(page, 80);
+    await expect(page.getByRole('button', { name: 'Show details: Saddle' })).toBeVisible();
+    await expect.poll(() => drawerHeight(page)).toBeLessThan(70);
+    expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  });
+
+  test('the tab moves only by the thumb: a tap on it does nothing', async ({ page }) => {
+    await page.goto('/bike');
+    await page.waitForTimeout(600);
+    await page.getByTestId('drawer-tab').tap();
+    await page.waitForTimeout(300);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+    await swipeTab(page, 80);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
+    await page.waitForTimeout(600);
+    await page.getByTestId('drawer-tab').tap();
+    await page.waitForTimeout(300);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
+  });
+
+  test('the bike never moves as the drawer opens and hides, and the drawing still zooms', async ({ page }) => {
+    await page.goto('/bike');
+    const before = await page.getByTestId('stage').boundingBox();
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await page.waitForTimeout(600);
+    expect(await page.getByTestId('stage').boundingBox()).toEqual(before);
+    await swipeTab(page, 80);
+    await page.waitForTimeout(600);
+    expect(await page.getByTestId('stage').boundingBox()).toEqual(before);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const whole = await viewBoxWidth(page);
+    await page.touchscreen.tap(b.x + 20, b.y + 20); await page.touchscreen.tap(b.x + 20, b.y + 20);
+    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(whole / 2);
+  });
+
+  test('a thumb swipe on the tab hides the drawer, and a swipe up opens it, without scrolling the page', async ({ page }) => {
+    await page.goto('/bike');
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await page.waitForTimeout(600); // the drawer settles before the thumb finds the tab
+    const startY: number = await page.evaluate(() => window.scrollY);
+    await swipeTab(page, 80);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
+    await page.waitForTimeout(600);
+    await swipeTab(page, -80);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+    await expect(page.getByRole('status')).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+  });
+
+  test('with nothing selected, a swipe down hides the guide and a swipe up brings it back', async ({ page }) => {
+    await page.goto('/bike');
+    await page.waitForTimeout(600);
+    await swipeTab(page, 80);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
+    await expect.poll(() => drawerHeight(page)).toBeLessThan(70);
+    await swipeTab(page, -80);
+    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
+    await expect(page.getByTestId('drawer-body').getByTestId('part-hint')).toBeInViewport();
+  });
+
+  test('scrolling never takes the bike apart: only the button and slider do', async ({ page }) => {
+    await page.goto('/bike');
+    await page.evaluate(() => { window.scrollTo(0, 2000); window.dispatchEvent(new Event('scroll')); });
+    await page.waitForTimeout(100);
+    await expect(page.getByRole('slider', { name: 'How far apart the bike is' })).toHaveAttribute('aria-valuetext', 'Together');
   });
 });
 
 test.describe('Phone, landscape', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+
+  test('the grip and nudge arrow sit on the cable’s end, level with it', async ({ page }) => {
+    await page.goto('/bike');
+    await expectScrubberAligned(page);
+  });
+
+  test('scrolling never takes the bike apart, and there is no scroll cue', async ({ page }) => {
+    await page.goto('/bike');
+    await page.evaluate(() => { window.scrollTo(0, 2000); window.dispatchEvent(new Event('scroll')); });
+    await page.waitForTimeout(100);
+    await expect(page.getByRole('slider', { name: 'How far apart the bike is' })).toHaveAttribute('aria-valuetext', 'Together');
+    await expect(page.getByTestId('scroll-cue')).toHaveCount(0);
+  });
 
   test('the bike takes the left, the title and card a column on the right', async ({ page }) => {
     await page.goto('/bike');

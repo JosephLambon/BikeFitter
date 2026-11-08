@@ -59,6 +59,9 @@ export function ExplodeScrubber({ progress, onChange }: { progress: number; onCh
         slotProps={{ input: { 'aria-label': 'How far apart the bike is' } }}
         sx={{
           position: 'absolute', top: 0, bottom: 0, left: PAD + MIN_SPAN, right: PAD, width: 'auto', height: '100%', p: 0, m: 0,
+          // MUI pads the slider 20 px top and bottom on touch screens, which drops the grip
+          // below the cable's end. The track is already tall enough to grab.
+          '@media (pointer: coarse)': { p: 0 },
           '& .MuiSlider-rail, & .MuiSlider-track': { opacity: 0 },
           '& .MuiSlider-thumb': {
             width: 4, height: 28, borderRadius: '6px', background: 'var(--tone)', transition: 'none',

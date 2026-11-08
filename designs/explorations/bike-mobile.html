@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en-GB" data-style="workstand" data-font="1" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore the bike on phones · design concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=JetBrains+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="../site/styles/base.css">
+<link rel="stylesheet" href="../site/styles/workstand.css">
+<link rel="stylesheet" href="../shared/bike.css">
+<style>
+  /* Review page chrome (not part of the site) */
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-text); }
+  .rv { max-width: 1480px; margin: 0 auto; padding: 56px 24px 120px; }
+  .rv-head { max-width: 760px; margin-bottom: 56px; }
+  .rv-head h1 { font-size: clamp(36px, 4.4vw, 52px); line-height: 1.06; margin: 0 0 16px; }
+  .rv-head p { color: var(--ink-2); font-size: 19px; margin: 0 0 12px; }
+  .rv-tools { display: flex; gap: 8px; margin-top: 20px; }
+  .rv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(392px, 1fr)); gap: 56px 32px; }
+  .rv-item h2 { font-size: 23px; margin: 14px 0 6px; }
+  .rv-item .rv-idea { color: var(--ink-2); font-size: 15px; margin: 0 0 10px; }
+  .rv-item ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink-2); }
+  .rv-item li { margin: 0 0 4px; }
+  .rv-item li b { color: var(--ink); font-weight: 600; }
+  .rv-n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--bike-tint); color: var(--bike); font-size: 14px; font-weight: 650; margin-right: 8px; }
+  .rv-label { display: flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+  .rv-label .mono { font-family: var(--f-mono); font-size: 12px; margin-left: auto; }
+
+  /* Phone frame (review chrome) */
+  .ph { width: 390px; height: 844px; border: 1px solid var(--rule); border-radius: 20px; overflow: hidden; position: relative; background: var(--bg); box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .ph-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+  .ph-scroll::-webkit-scrollbar { display: none; }
+
+  /* Shared site pieces */
+  .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .pnav { height: 60px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--bg) 88%, transparent); }
+  .pnav .pmark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--ink); color: var(--bg); }
+  .pnav .pmark .ico { width: 18px; height: 18px; }
+  .pnav b { font-weight: 650; letter-spacing: -.02em; font-size: 16px; }
+  .pnav .sp { flex: 1; }
+  .pnav .ib { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--ink-2); }
+  .pnav .ib .bike { color: var(--bike); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--bike-tint); color: var(--bike); }
+  .chip .ico { width: 16px; height: 16px; }
+  .mono { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+  .tip { font-size: 13px; color: var(--ink-2); margin: 0; }
+  .bench { background: radial-gradient(circle at 2.1px 2.1px, var(--bench-dot) 1.4px, transparent 1.7px) 0 0 / 22px 22px, var(--bench-wall); }
+  :root { --bench-wall: #ffffff; --bench-dot: #ecc89a; --bench-line: #e6e6e1; }
+  :root[data-theme="dark"] { --bench-wall: #2d2012; --bench-dot: #5a3e1d; --bench-line: transparent; }
+  .seg { width: 100%; }
+  .seg .mono { margin-left: 6px; }
+  input[type=range] { width: 100%; accent-color: var(--bike); margin: 0; }
+  .btn { justify-content: center; }
+  .btn .ico { width: 18px; height: 18px; }
+  .bx { --bx-hole: var(--bench-wall); }
+  .bx-card { font-size: 14px; }
+  .ph .bx-card { position: static; width: auto; pointer-events: auto; }
+  .t26 { font-size: 26px; line-height: 1.08; margin: 0; }
+  .t32 { font-size: 32px; line-height: 1.06; margin: 0; }
+  .pdek { font-size: 15px; color: var(--ink-2); margin: 8px 0 0; line-height: 1.45; }
+  [data-pillar="bike"] { --tone: var(--bike); --tone-tint: var(--bike-tint); --tone-dot: var(--bike-dot); }
+
+  /* 1 · Workbench sheet */
+  .ph.c1 { display: grid; grid-template-rows: 60px auto minmax(0, 1fr) auto; }
+  .c1 .top { padding: 16px 16px 12px; flex: none; }
+  .c1 .stg { flex: 1; min-height: 0; display: grid; place-items: center; border-top: 1px solid var(--bench-line); padding: 0 8px; }
+  .c1 .stg .bx { width: 100%; }
+  .c1 .sheet { flex: none; background: var(--bg); border-radius: 20px 20px 0 0; box-shadow: 0 -1px 0 var(--rule), 0 -10px 30px rgba(0,0,0,.08); padding: 8px 16px 20px; }
+  .c1 .grab { display: block; width: 40px; height: 4px; margin: 4px auto 14px; border-radius: 2px; background: var(--rule); border: 0; padding: 0; cursor: pointer; }
+  .c1 .row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .c1 .sheet .bx-card { box-shadow: none; border: 0; padding: 4px 0 0; background: none; }
+  .c1 .sheet .bx-card .bx-card-how { display: none; }
+  .c1 .sheet.is-open .bx-card .bx-card-how { display: block; }
+  .c1 .more-btn { font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); border: 0; border-radius: 8px; padding: 6px 10px; cursor: pointer; margin-top: 4px; }
+
+  /* 2 · Parts shelf (carousel) */
+  .c2 .top { padding: 16px 16px 12px; }
+  .c2 .stg { padding: 4px 8px; border-top: 1px solid var(--bench-line); border-bottom: 1px solid var(--bench-line); }
+  .c2 .sys { display: flex; gap: 6px; overflow-x: auto; padding: 14px 16px 10px; scrollbar-width: none; }
+  .c2 .sys::-webkit-scrollbar, .c2 .car::-webkit-scrollbar { display: none; }
+  .c2 .sys button { flex: none; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: var(--surface); color: var(--ink-2); }
+  .c2 .sys button[aria-pressed=true] { background: var(--bike-tint); color: var(--bike); }
+  .c2 .car { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 16px 12px; scroll-padding: 0 16px; scrollbar-width: none; }
+  .c2 .card { flex: none; width: calc(100% - 44px); scroll-snap-align: start; background: var(--surface); border-radius: 14px; padding: 16px 18px; font-size: 14px; line-height: 1.5; height: 236px; overflow: hidden; position: relative; }
+  .c2 .card .bx-card-sys { background: var(--bg); }
+  .c2 .card .bx-card-how { display: none; }
+  .c2 .card .bx-card-fit { background: var(--bg); }
+  .c2 .card .n { position: absolute; top: 16px; right: 18px; }
+  .c2 .bar { display: flex; gap: 10px; align-items: center; padding: 4px 16px 20px; }
+
+  /* 3 · Tool wall */
+  .c3 .top { padding: 20px 16px 16px; }
+  .c3 .pic { margin: 0 16px; border-radius: 16px; padding: 8px 6px; }
+  .c3 .ctl { padding: 14px 16px 6px; }
+  .c3 .wall { margin: 12px 16px 24px; border-radius: 16px; padding: 18px 14px 6px; background: radial-gradient(circle at 2px 2px, var(--bike-dot) 1.3px, transparent 1.6px) 0 0 / 18px 18px, var(--bike-tint); }
+  .c3 .wall h3 { font-size: 15px; font-weight: 600; color: var(--bike); margin: 0 0 10px; letter-spacing: -.01em; }
+  .c3 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+  .c3 .tile { background: var(--bg); border: 0; border-radius: 12px; box-shadow: var(--shadow); padding: 8px 6px 8px; cursor: pointer; font: inherit; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .c3 .tile .bx { width: 100%; height: 62px; }
+  .c3 .tile svg { width: 100%; height: 62px; display: block; overflow: visible; }
+  .c3 .tile span { font-size: 12px; font-weight: 600; line-height: 1.25; text-align: center; }
+  .c3 .tile.is-on { box-shadow: var(--shadow), inset 0 0 0 1px var(--bike); }
+  .c3 .tile.is-on span { color: var(--bike); }
+  .c3 .pop { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 5; transform: translateY(calc(100% + 20px)); transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .c3 .pop.is-open { transform: none; }
+  .c3 .pop .bx-card { position: relative; width: auto; pointer-events: auto; max-height: 360px; overflow: auto; }
+  .c3 .x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 8px; border: 0; background: var(--surface-2); color: var(--ink); cursor: pointer; display: grid; place-items: center; z-index: 1; }
+  .c3 .x .ico { width: 16px; height: 16px; }
+
+  /* 4 · Guided tour */
+  .c4 .top { padding: 16px 16px 10px; display: flex; align-items: center; gap: 10px; }
+  .c4 .top h1 { flex: 1; }
+  .c4 .stg { height: 300px; flex: none; position: relative; border-top: 1px solid var(--bench-line); border-bottom: 1px solid var(--bench-line); overflow: hidden; }
+  .c4 .stg .bx, .c4 .stg .bx-stage { height: 100%; }
+  .c4 .stg .bx-stage { aspect-ratio: auto; }
+  .c4 .whole { position: absolute; top: 10px; right: 10px; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--rule); color: var(--ink); cursor: pointer; }
+  .c4 .prog { display: flex; align-items: center; gap: 10px; padding: 14px 16px 0; }
+  .c4 .track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+  .c4 .track i { display: block; height: 100%; background: var(--bike); border-radius: 2px; transition: width .4s cubic-bezier(.2,.8,.2,1); }
+  .c4 .body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 0; }
+  .c4 .body .bx-card { box-shadow: none; border: 0; padding: 10px 0 0; background: none; }
+  .c4 .pfoot { flex: none; display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; padding: 12px 16px 20px; border-top: 1px solid var(--rule); }
+  .c4 .pfoot .btn { width: 100%; }
+  .c4 .back .ico { transform: scaleX(-1); }
+
+  /* 5 · Wall hook */
+  .c5 .top { padding: 20px 16px 8px; }
+  .c5 .wallhook { position: relative; height: 600px; margin-top: 8px; border-top: 1px solid var(--bench-line); border-bottom: 1px solid var(--bench-line); overflow: hidden; }
+  .c5 .rot { position: absolute; left: 50%; top: calc(50% + 14px); width: 560px; transform: translate(-50%, -50%) rotate(-90deg); }
+  .c5 .hook { position: absolute; left: 50%; top: 0; width: 40px; height: 44px; transform: translateX(-50%); color: var(--ink-2); z-index: 1; pointer-events: none; }
+  .c5 .ctl { display: flex; gap: 10px; align-items: center; padding: 14px 16px 0; }
+  .c5 .ctl .btn { flex: none; }
+  .c5 .panel { padding: 14px 16px 28px; }
+  .c5 .panel .bx-card { box-shadow: none; padding: 16px 18px; background: var(--surface); border: 0; }
+  .c5 .panel .bx-card-fit { background: var(--bg); }
+  .c5 .panel .bx-card-sys { background: var(--bg); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body data-page="bike">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mark" viewBox="0 0 24 24"><circle cx="6" cy="15.5" r="3.6"/><circle cx="18" cy="15.5" r="3.6"/><path d="M6 15.5 10 8h6.5L18 15.5M10 8l3.2 7.5h-7.2M9 6h3"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.8"/><path d="M12 3.5v6.7M4.6 16.3l5.8-3.3M19.4 16.3l-5.8-3.3"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14.5 4H20v5.5M20 4l-6 6M9.5 20H4v-5.5M4 20l6-6"/></symbol>
+  <symbol id="i-build" viewBox="0 0 24 24"><path d="M4 7h8.5M16.5 7H20M4 17h3.5M11.5 17H20"/><circle cx="14.5" cy="7" r="2"/><circle cx="9.5" cy="17" r="2"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<main class="rv">
+  <header class="rv-head">
+    <p class="kicker" data-pillar="bike">Design concepts · phones</p>
+    <h1>Five ways Explore the bike could work on a phone.</h1>
+    <p>Each phone is live: tap parts, drag the sliders, swipe the cards. All use the real drawing and real part copy from the prototype engine, and stay inside Workstand's rules.</p>
+    <p>The common problem they each attack: today the bike is small, the controls are three unlabelled icons, and the bottom half of the screen is empty.</p>
+    <div class="rv-tools"><button class="btn btn--quiet" type="button" id="theme"><svg class="ico"><use href="#i-moon"/></svg>Switch light / dark</button></div>
+  </header>
+
+  <div class="rv-grid">
+
+    <!-- 1 -->
+    <section class="rv-item">
+      <div class="ph c1" data-pillar="bike">
+        <div class="pnav"><span class="pmark"><svg class="ico"><use href="#i-mark"/></svg></span><b>BikeFitter</b><span class="sp"></span><span class="ib"><svg class="ico bike"><use href="#i-bike"/></svg></span><span class="ib"><svg class="ico"><use href="#i-menu"/></svg></span></div>
+        <div class="top"><span class="chip"><svg class="ico"><use href="#i-bike"/></svg>Explore the bike</span><h1 class="t26" style="margin-top:10px">What every part of a road bike does.</h1></div>
+        <div class="stg bench"><div class="bx" id="b1"></div></div>
+        <div class="sheet" id="s1">
+          <button class="grab" type="button" aria-label="Show more" id="g1"></button>
+          <div class="seg" role="radiogroup" aria-label="Bike" style="margin-bottom:12px">
+            <label><input type="radio" name="m1" value="0" checked>Together</label>
+            <label><input type="radio" name="m1" value="1">Apart</label>
+            <label><input type="radio" name="m1" value="b">Build</label>
+          </div>
+          <div class="row"><input type="range" min="0" max="100" value="0" id="r1" aria-label="How far apart"><span class="mono" id="p1">0%</span></div>
+          <div id="k1"></div>
+        </div>
+      </div>
+      <div class="rv-label" style="margin-top:16px"><span class="rv-n">1</span>Workbench sheet<span class="mono">Maps-style sheet</span></div>
+      <h2>The bike above, the bench drawer below.</h2>
+      <p class="rv-idea">Everything you touch lives in one window sheet at the thumb. A segmented control replaces the three mystery icons: Together · Apart · Build. Tap a part and the sheet grows; the stage shrinks so the card never covers the drawing.</p>
+      <ul><li><b>For:</b> familiar phone pattern, controls labelled, all within thumb reach.</li><li><b>Against:</b> least "Workstand-specific"; a growing sheet makes the bike small while reading.</li></ul>
+    </section>
+
+    <!-- 2 -->
+    <section class="rv-item">
+      <div class="ph c2" data-pillar="bike">
+        <div class="pnav"><span class="pmark"><svg class="ico"><use href="#i-mark"/></svg></span><b>BikeFitter</b><span class="sp"></span><span class="ib"><svg class="ico bike"><use href="#i-bike"/></svg></span><span class="ib"><svg class="ico"><use href="#i-menu"/></svg></span></div>
+        <div class="ph-scroll" style="display:flex;flex-direction:column">
+          <div class="top"><span class="chip"><svg class="ico"><use href="#i-bike"/></svg>Explore the bike</span><h1 class="t26" style="margin-top:10px">What every part of a road bike does.</h1><p class="pdek">Swipe the cards to walk round the bike.</p></div>
+          <div class="stg bench"><div class="bx" id="b2"></div></div>
+          <div class="sys" id="sys2"></div>
+          <div class="car" id="car2"></div>
+          <div class="bar"><button class="btn btn--quiet" type="button" id="t2" style="flex:none"><svg class="ico"><use href="#i-expand"/></svg>Take it apart</button><input type="range" min="0" max="100" value="0" id="r2" aria-label="How far apart"></div>
+        </div>
+      </div>
+      <div class="rv-label" style="margin-top:16px"><span class="rv-n">2</span>Parts shelf<span class="mono">swipe to explore</span></div>
+      <h2>Swipe through the parts like cards on a shelf.</h2>
+      <p class="rv-idea">Fingers are too big for a chain or a mech hanger, so the phone flips the job: system chips and a snap carousel of shelf cards pick the part, and the drawing lights it up. Tapping the bike still works, and scrolls the shelf to match.</p>
+      <ul><li><b>For:</b> no fiddly hit targets; you see there are 36 parts to discover; reads well one-handed.</li><li><b>Against:</b> the card shows less copy at once (full text on tap); carousels hide content off-screen.</li></ul>
+    </section>
+
+    <!-- 3 -->
+    <section class="rv-item">
+      <div class="ph c3" data-pillar="bike">
+        <div class="pnav"><span class="pmark"><svg class="ico"><use href="#i-mark"/></svg></span><b>BikeFitter</b><span class="sp"></span><span class="ib"><svg class="ico bike"><use href="#i-bike"/></svg></span><span class="ib"><svg class="ico"><use href="#i-menu"/></svg></span></div>
+        <div class="ph-scroll">
+          <div class="top"><span class="chip"><svg class="ico"><use href="#i-bike"/></svg>Explore the bike</span><h1 class="t32" style="margin-top:12px">What every part of a road bike does.</h1><p class="pdek">On a phone, the bike comes apart onto the workshop wall: every part on its own peg, grouped by job.</p></div>
+          <div class="pic bench"><div class="bx" id="b3"></div></div>
+          <div class="ctl"><div class="seg" role="radiogroup" aria-label="View"><label><input type="radio" name="m3" value="bike">Whole bike</label><label><input type="radio" name="m3" value="wall" checked>On the wall</label></div></div>
+          <div class="wall" id="wall3"></div>
+        </div>
+        <div class="pop" id="pop3"><button class="x" type="button" aria-label="Close" id="x3"><svg class="ico"><use href="#i-close"/></svg></button><div id="k3"></div></div>
+      </div>
+      <div class="rv-label" style="margin-top:16px"><span class="rv-n">3</span>Tool wall<span class="mono">pegboard flat-lay</span></div>
+      <h2>Take it apart, and hang every part on the pegboard.</h2>
+      <p class="rv-idea">The most Workstand idea: rule 2 ("tools hang on pegboard") made literal. On a phone the explode lands on a scrolling wall of small windows, one per part, grouped by system. Tap the whole bike to see where a part lives; tap a peg to read about it.</p>
+      <ul><li><b>For:</b> every part big and tappable; the no-overlap rule becomes trivial; very ownable.</li><li><b>Against:</b> loses the sense of parts flying apart on the phone; more scrolling.</li></ul>
+    </section>
+
+    <!-- 4 -->
+    <section class="rv-item">
+      <div class="ph c4" data-pillar="bike">
+        <div class="pnav"><span class="pmark"><svg class="ico"><use href="#i-mark"/></svg></span><b>BikeFitter</b><span class="sp"></span><span class="ib"><svg class="ico bike"><use href="#i-bike"/></svg></span><span class="ib"><svg class="ico"><use href="#i-menu"/></svg></span></div>
+        <div class="top"><h1 class="t26">A guided walk round the bike.</h1><span class="chip"><svg class="ico"><use href="#i-bike"/></svg>Tour</span></div>
+        <div class="stg bench"><div class="bx" id="b4"></div><button class="whole" type="button" id="w4">Whole bike</button></div>
+        <div class="prog"><span class="mono" id="n4">1 of 38</span><span class="track"><i id="bar4" style="width:3%"></i></span></div>
+        <div class="body" id="k4"></div>
+        <div class="pfoot"><button class="btn btn--quiet back" type="button" id="prev4"><svg class="ico"><use href="#i-arrow"/></svg>Back</button><button class="btn" type="button" id="next4">Next part<svg class="ico"><use href="#i-arrow"/></svg></button></div>
+      </div>
+      <div class="rv-label" style="margin-top:16px"><span class="rv-n">4</span>Guided tour<span class="mono">zoom to each part</span></div>
+      <h2>Let the bike lead: next part, next part.</h2>
+      <p class="rv-idea">A story, not a toy. The drawing zooms smoothly onto each part in a fitter's order (contact points first), the copy sits underneath, and one big thumb button moves on. "Whole bike" zooms out; tapping any part jumps the tour there.</p>
+      <ul><li><b>For:</b> best for a newcomer; teaches in order; the bike is always big and the part always visible.</li><li><b>Against:</b> less free play; the explode becomes a secondary mode.</li></ul>
+    </section>
+
+    <!-- 5 -->
+    <section class="rv-item">
+      <div class="ph c5" data-pillar="bike">
+        <div class="pnav"><span class="pmark"><svg class="ico"><use href="#i-mark"/></svg></span><b>BikeFitter</b><span class="sp"></span><span class="ib"><svg class="ico bike"><use href="#i-bike"/></svg></span><span class="ib"><svg class="ico"><use href="#i-menu"/></svg></span></div>
+        <div class="ph-scroll">
+          <div class="top"><span class="chip"><svg class="ico"><use href="#i-bike"/></svg>Explore the bike</span><h1 class="t32" style="margin-top:12px">What every part of a road bike does.</h1></div>
+          <div class="wallhook bench">
+            <svg class="hook" viewBox="0 0 40 44" aria-hidden="true"><path d="M8 2h24M20 2v26a8 8 0 0 1-16 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <div class="rot"><div class="bx" id="b5"></div></div>
+          </div>
+          <div class="ctl"><button class="btn" type="button" id="t5"><svg class="ico"><use href="#i-expand"/></svg>Take it apart</button><input type="range" min="0" max="100" value="0" id="r5" aria-label="How far apart"></div>
+          <div class="panel" id="k5"></div>
+        </div>
+      </div>
+      <div class="rv-label" style="margin-top:16px"><span class="rv-n">5</span>Wall hook<span class="mono">portrait-native</span></div>
+      <h2>Hang the bike up, the way a workshop does.</h2>
+      <p class="rv-idea">Bikes in a workshop hang by the front wheel. So in portrait the drawing does too: it turns upright and fills the tall screen, 40% bigger than today with no "turn your phone" prompt. Controls and the card follow below, in the page's own scroll.</p>
+      <ul><li><b>For:</b> biggest bike in portrait by far; memorable; zero new interaction to learn.</li><li><b>Against:</b> sideways bike can feel odd to some; explode vectors were designed for the side view.</li></ul>
+    </section>
+
+  </div>
+</main>
+
+<script src="../shared/bike.js"></script>
+<script>
+(function () {
+  var M = BikeExplorer.mount;
+  var root = document.documentElement;
+  document.getElementById('theme').onclick = function () { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; };
+  function tween(from, to, ms, fn) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { fn(to); return; }
+    var t0 = performance.now();
+    (function step(t) { var k = Math.min(1, (t - t0) / ms); var e = 1 - Math.pow(1 - k, 3); fn(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); })(t0);
+  }
+  function grabCard(host, into) { var c = host.querySelector('.bx-card'); if (c && into) into.appendChild(c); return c; }
+
+  /* Copy map: read each part's real card copy from a hidden instance */
+  var hid = document.createElement('div'); hid.style.cssText = 'position:absolute;left:-9999px;width:600px'; document.body.appendChild(hid);
+  var src = M(hid, { interactive: true, dock: true, lessonHref: '#' });
+  var COPY = {}; src.parts.forEach(function (p) { src.select(p.id); COPY[p.id] = hid.querySelector('.bx-card').innerHTML; });
+  src.select(null);
+  var ORDER = ['Contact points', 'Cockpit', 'Frame', 'Fork', 'Drivetrain', 'Brakes', 'Wheels', 'Accessories'];
+  var PARTS = src.parts.slice().sort(function (a, b) { return ORDER.indexOf(a.system) - ORDER.indexOf(b.system); });
+  var SYSTEMS = ORDER.filter(function (s) { return PARTS.some(function (p) { return p.system === s; }); });
+
+  /* 1 · Workbench sheet */
+  (function () {
+    var el = document.getElementById('b1'), sheet = document.getElementById('s1'), k = document.getElementById('k1'), r = document.getElementById('r1'), pc = document.getElementById('p1');
+    var hint = '<p class="tip">Tap any part of the bike to see what it does.</p>';
+    var api = M(el, { interactive: true, slider: r, dock: true, placeholder: hint, lessonHref: '#', onSelect: function (id) { sheet.classList.toggle('is-open', !!id); if (id) more(); } });
+    var card = grabCard(el, k);
+    function more() { if (!card.querySelector('.more-btn')) { var b = document.createElement('button'); b.className = 'more-btn'; b.type = 'button'; b.textContent = 'How it works'; b.onclick = function () { sheet.classList.add('is-open'); b.remove(); }; card.appendChild(b); } }
+    r.addEventListener('input', function () { pc.textContent = r.value + '%'; });
+    sheet.querySelectorAll('input[name=m1]').forEach(function (i) { i.addEventListener('change', function () {
+      if (i.value === 'b') { api.select(null); card.innerHTML = '<p class="tip" style="margin-bottom:10px">Build: swap parts and watch the bike change.</p><div style="display:grid;gap:8px">' +
+        ['Gears|Mechanical|Electronic', 'Brakes|Disc|Rim', 'Rims|Shallow|Deep', 'Chainrings|Two|One', 'Mudguards|Off|On'].map(function (s, n) { var a = s.split('|'); return '<div style="display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:14px;padding:8px 8px 8px 14px"><span style="flex:1;font-size:14px;font-weight:600">' + a[0] + '</span><div class="seg" style="width:180px"><label><input type="radio" name="b1' + n + '" checked>' + a[1] + '</label><label><input type="radio" name="b1' + n + '">' + a[2] + '</label></div></div>'; }).join('') + '</div>'; card.hidden = false; sheet.classList.add('is-open'); return; }
+      sheet.classList.remove('is-open'); card.innerHTML = hint; card.hidden = false;
+      var to = +i.value * 100, from = +r.value; tween(from, to, 700, function (v) { r.value = v; pc.textContent = Math.round(v) + '%'; api.setProgress(v / 100); });
+    }); });
+    document.getElementById('g1').onclick = function () { sheet.classList.toggle('is-open'); };
+    api.select('saddle');
+  })();
+
+  /* 2 · Parts shelf */
+  (function () {
+    var el = document.getElementById('b2'), car = document.getElementById('car2'), sys = document.getElementById('sys2'), r = document.getElementById('r2');
+    var api, lock = false;
+    car.innerHTML = PARTS.map(function (p, i) { return '<article class="card bx-card" data-id="' + p.id + '"><span class="mono n">' + (i + 1) + ' / ' + PARTS.length + '</span>' + COPY[p.id] + '</article>'; }).join('');
+    sys.innerHTML = SYSTEMS.map(function (s) { return '<button type="button" aria-pressed="false" data-s="' + s + '">' + s + '</button>'; }).join('');
+    function mark(id) { var p = PARTS.find(function (x) { return x.id === id; }); sys.querySelectorAll('button').forEach(function (b) { var on = p && b.dataset.s === p.system; b.setAttribute('aria-pressed', on); if (on) b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
+    function go(id) { var c = car.querySelector('[data-id="' + id + '"]'); if (!c) return; lock = true; car.scrollTo({ left: c.offsetLeft - 16, behavior: 'smooth' }); setTimeout(function () { lock = false; }, 600); }
+    api = M(el, { interactive: true, slider: r, dock: true, lessonHref: '#', onSelect: function (id) { if (id) { mark(id); go(id); } } });
+    var own = el.querySelector('.bx-card'); if (own) own.remove();
+    var t; car.addEventListener('scroll', function () { if (lock) return; clearTimeout(t); t = setTimeout(function () {
+      var i = Math.round(car.scrollLeft / (car.firstElementChild.offsetWidth + 10)); var id = PARTS[Math.min(i, PARTS.length - 1)].id; api.select(id); mark(id);
+    }, 90); });
+    sys.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; var p = PARTS.find(function (x) { return x.system === b.dataset.s; }); api.select(p.id); mark(p.id); go(p.id); });
+    document.getElementById('t2').onclick = function () { var to = +r.value > 50 ? 0 : 100, from = +r.value; this.lastChild.textContent = to ? 'Put it together' : 'Take it apart'; tween(from, to, 700, function (v) { r.value = v; api.setProgress(v / 100); }); };
+    api.select(PARTS[0].id); mark(PARTS[0].id);
+  })();
+
+  /* 3 · Tool wall */
+  (function () {
+    var el = document.getElementById('b3'), wall = document.getElementById('wall3'), pop = document.getElementById('pop3'), k = document.getElementById('k3');
+    var api = M(el, { interactive: true, dock: true, lessonHref: '#', onSelect: function (id) { if (id) open(id); } });
+    var card = grabCard(el, k); card.classList.add('bx-card');
+    var svg = el.querySelector('svg');
+    wall.innerHTML = SYSTEMS.map(function (s) { return '<h3>' + s + '</h3><div class="tiles">' + PARTS.filter(function (p) { return p.system === s; }).map(function (p) {
+      return '<button class="tile" type="button" data-id="' + p.id + '"><div class="bx" data-slot="' + p.id + '"></div><span>' + p.name + '</span></button>'; }).join('') + '</div>'; }).join('');
+    wall.querySelectorAll('[data-slot]').forEach(function (slot) {
+      var id = slot.dataset.slot, c = svg.cloneNode(true);
+      c.removeAttribute('class'); c.querySelectorAll('[data-part]').forEach(function (g) { if (g.getAttribute('data-part') !== id) g.remove(); });
+      c.querySelectorAll('.bx-shadow, .bx-groundline, .dim, .dim-ext, .dim-label, .dim-head, .bx-bench').forEach(function (n) { n.remove(); });
+      c.querySelectorAll('[tabindex]').forEach(function (n) { n.removeAttribute('tabindex'); });
+      c.setAttribute('aria-hidden', 'true'); slot.appendChild(c);
+      requestAnimationFrame(function () { try { var b = c.getBBox(), pad = Math.max(b.width, b.height) * 0.08; c.setAttribute('viewBox', [b.x - pad, b.y - pad, b.width + 2 * pad, b.height + 2 * pad].join(' ')); c.setAttribute('preserveAspectRatio', 'xMidYMid meet'); } catch (e) {} });
+    });
+    function open(id) {
+      wall.querySelectorAll('.tile').forEach(function (t) { t.classList.toggle('is-on', t.dataset.id === id); });
+      card.innerHTML = COPY[id]; card.hidden = false; pop.classList.add('is-open');
+    }
+    wall.addEventListener('click', function (e) { var t = e.target.closest('.tile'); if (t) api.select(t.dataset.id); });
+    document.getElementById('x3').onclick = function () { pop.classList.remove('is-open'); api.select(null); wall.querySelectorAll('.tile').forEach(function (t) { t.classList.remove('is-on'); }); };
+    document.querySelectorAll('input[name=m3]').forEach(function (i) { i.onchange = function () { wall.style.display = i.value === 'wall' ? '' : 'none'; }; });
+  })();
+
+  /* 4 · Guided tour */
+  (function () {
+    var el = document.getElementById('b4'), k = document.getElementById('k4'), i = 0;
+    var api = M(el, { interactive: true, dock: true, lessonHref: '#', onSelect: function (id) { if (id && id !== PARTS[i].id) { i = PARTS.findIndex(function (p) { return p.id === id; }); show(); } } });
+    var card = grabCard(el, k), svg = el.querySelector('svg'), whole = svg.getAttribute('viewBox').split(' ').map(Number), vb = whole.slice();
+    function setVB(t) { svg.setAttribute('viewBox', t.map(function (v) { return Math.round(v * 10) / 10; }).join(' ')); }
+    function target(id) {
+      var bb = null; svg.querySelectorAll('[data-part="' + id + '"]').forEach(function (g) { var b = g.getBBox(); if (!b.width && !b.height) return; bb = bb ? { x: Math.min(bb.x, b.x), y: Math.min(bb.y, b.y), r: Math.max(bb.r, b.x + b.width), b: Math.max(bb.b, b.y + b.height) } : { x: b.x, y: b.y, r: b.x + b.width, b: b.y + b.height }; });
+      if (!bb) return whole;
+      var w = bb.r - bb.x, h = bb.b - bb.y, cx = bb.x + w / 2, cy = bb.y + h / 2, ar = el.clientWidth / el.clientHeight;
+      w = Math.max(w * 1.6, h * 1.6 * ar, whole[2] * 0.45); h = w / ar;
+      return [cx - w / 2, cy - h / 2, w, h];
+    }
+    function zoomTo(t) { var a = vb.slice(); tween(0, 1, 650, function (e) { vb = a.map(function (v, n) { return v + (t[n] - v) * e; }); setVB(vb); }); }
+    function show() {
+      var p = PARTS[i]; api.select(p.id); card.innerHTML = COPY[p.id]; card.hidden = false;
+      document.getElementById('n4').textContent = (i + 1) + ' of ' + PARTS.length + ' · ' + p.system;
+      document.getElementById('bar4').style.width = ((i + 1) / PARTS.length * 100) + '%';
+      zoomTo(target(p.id)); k.scrollTop = 0;
+    }
+    document.getElementById('next4').onclick = function () { i = (i + 1) % PARTS.length; show(); };
+    document.getElementById('prev4').onclick = function () { i = (i - 1 + PARTS.length) % PARTS.length; show(); };
+    document.getElementById('w4').onclick = function () { zoomTo(whole); };
+    setTimeout(show, 200);
+  })();
+
+  /* 5 · Wall hook */
+  (function () {
+    var el = document.getElementById('b5'), k = document.getElementById('k5'), r = document.getElementById('r5');
+    var api = M(el, { interactive: true, slider: r, dock: true, placeholder: '<p class="tip">Tap any part of the bike to see what it does.</p>', lessonHref: '#' });
+    grabCard(el, k);
+    document.getElementById('t5').onclick = function () { var to = +r.value > 50 ? 0 : 100, from = +r.value; this.lastChild.textContent = to ? 'Put it together' : 'Take it apart'; tween(from, to, 700, function (v) { r.value = v; api.setProgress(v / 100); }); };
+    api.select('chainset');
+  })();
+})();
+</script>
+</body>
+</html>
