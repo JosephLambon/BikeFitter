@@ -79,7 +79,9 @@ export const AX = (l: number) => along(HTT, sDown, l);
 export const ST = (l: number) => along(BB, seatDir, l);
 export const STEM = AX(-50);
 export const BAR = along(STEM, dir(11), 100);
-const TYRE_R = 339, RIM_R = 311, RIM_IN = 276;
+export const TYRE_R = 339, RIM_R = 311;
+/** Inner edge of the rim: shallow (the original drawing) and deep-section. */
+export const RIM_IN = 276, RIM_IN_DEEP = 251;
 export const GROUND = 70 - TYRE_R;
 const CRANK_DEG = -32, CRANK_L = 172.5;
 export const CRANK = CRANK_DEG;
@@ -126,11 +128,11 @@ export function teeth(c: Pt, r: number, count: number, w: number): string {
   return '<circle class="teeth" cx="' + r1(c.x) + '" cy="' + r1(-c.y) + '" r="' + r + '" stroke-width="' + w +
     '" stroke-dasharray="' + r1(t * 0.48) + ' ' + r1(t * 0.52) + '"/>';
 }
-function spokes(c: Pt, count: number, flange: number): string {
+function spokes(c: Pt, count: number, flange: number, rimIn: number): string {
   let d = '';
   for (let i = 0; i < count; i++) {
     const a = (360 / count) * i, b = a + (i % 2 ? 1 : -1) * 18;
-    d += 'M' + S(polar(c, flange, a)) + 'L' + S(polar(c, RIM_IN - 2, b));
+    d += 'M' + S(polar(c, flange, a)) + 'L' + S(polar(c, rimIn - 2, b));
   }
   return '<path class="m-spoke" d="' + d + '"/>';
 }
@@ -141,12 +143,12 @@ function holes(c: Pt, r: number, count: number, size: number): string {
 }
 export const draw = {
   tyre: (c: Pt) => fillShape(annulus(c, TYRE_R, RIM_R), 'dark') + P(annulus(c, TYRE_R - 7, TYRE_R - 9), 'hl m-dark-hi', ' fill-rule="evenodd"'),
-  rim: (c: Pt) => fillShape(annulus(c, RIM_R, RIM_IN), 'dark') + P(annulus(c, RIM_R - 3, RIM_R - 7), 'hl m-dark-hi', ' fill-rule="evenodd"'),
-  spokes: (c: Pt) => hit(annulus(c, RIM_IN - 1, 92)) + spokes(c, 24, 24),
+  rim: (c: Pt, rimIn = RIM_IN) => fillShape(annulus(c, RIM_R, r1(rimIn)), 'dark') + P(annulus(c, RIM_R - 3, RIM_R - 7), 'hl m-dark-hi', ' fill-rule="evenodd"'),
+  spokes: (c: Pt, rimIn = RIM_IN) => hit(annulus(c, r1(rimIn - 1), 92)) + spokes(c, 24, 24, rimIn),
   hub: (c: Pt, rear: boolean) => fillShape(circle(c, rear ? 34 : 28), 'metal') + fillShape(circle(c, rear ? 20 : 17), 'metal-hi'),
-  valve: (c: Pt, deg: number) => {
-    const a = polar(c, RIM_IN + 2, deg), b = polar(c, RIM_IN - 30, deg);
-    return hit(capsule(a, b, 22)) + fillShape(capsule(a, b, 7), 'metal') + fillShape(capsule(polar(c, RIM_IN - 4, deg), polar(c, RIM_IN - 12, deg), 12), 'metal-hi');
+  valve: (c: Pt, deg: number, rimIn = RIM_IN) => {
+    const a = polar(c, rimIn + 2, deg), b = polar(c, rimIn - 30, deg);
+    return hit(capsule(a, b, 22)) + fillShape(capsule(a, b, 7), 'metal') + fillShape(capsule(polar(c, rimIn - 4, deg), polar(c, rimIn - 12, deg), 12), 'metal-hi');
   },
   thru: (c: Pt) => hit(circle(c, 16)) + fillShape(circle(c, 11), 'dark') + fillShape(circle(c, 5), 'metal-hi'),
   rotor: (c: Pt, r: number) => {
@@ -154,6 +156,22 @@ export const draw = {
     for (let i = 0; i < 6; i++) s += fillShape(capsule(polar(c, 16, i * 60 + 15), polar(c, r - 15, i * 60 + 35), 9, 7), 'metal-hi');
     return s + fillShape(circle(c, 18), 'dark');
   },
+  /** A rim-brake calliper: mounted at `mount`, arms reaching to a pad on the rim's braking surface. */
+  rimCalliper: (axle: Pt, mount: Pt) => {
+    const u = unit(sub(mount, axle)), t = perp(u), pad = along(axle, u, RIM_R - 16);
+    const arm = 'M' + S(along(mount, t, 22)) + 'C' + S(along(along(mount, t, 34), u, -24)) + ' ' + S(along(along(pad, t, 16), u, 30)) + ' ' + S(along(pad, t, 6));
+    return hit(capsule(mount, pad, 70)) + thick(arm, 9, 'metal') +
+      fillShape(capsule(along(pad, t, -14), along(pad, t, 14), 9), 'dark') +
+      fillShape(capsule(along(mount, t, -18), along(mount, t, 24), 26, 22), 'metal') +
+      fillShape(circle(mount, 6), 'metal-hi') + fillShape(capsule(along(mount, t, 20), along(along(mount, t, 30), u, 18), 8), 'dark');
+  },
+  /** A quick-release skewer: nut and cam lever at the hub. */
+  qr: (c: Pt, deg: number) => hit(circle(c, 18)) + fillShape(capsule(c, polar(c, 52, deg), 13, 9), 'metal') + fillShape(circle(c, 12), 'metal-hi') + fillShape(circle(c, 4.5), 'dark'),
+  /** A mudguard: a band just outside the tyre from angle a1 to a2, with a stay to the axle. */
+  mudguard: (c: Pt, a1: number, a2: number, stay: number) =>
+    fillShape(capsule(polar(c, 26, stay), polar(c, TYRE_R + 10, stay), 4.5), 'metal') +
+    fillShape(sector(c, TYRE_R + 6, TYRE_R + 15, a1, a2), 'dark') + P(sector(c, TYRE_R + 11, TYRE_R + 13, a1 + 2, a2 - 2), 'hl m-dark-hi'),
+  battery: (a: Pt, b: Pt) => fillShape(capsule(a, b, 18, 18), 'dark') + P(capsule(a, b, 6, 6), 'hl m-dark-hi'),
   calliper: (c: Pt, deg: number) => {
     const t = dir(deg + 90);
     return fillShape(capsule(along(c, t, -30), along(c, t, 30), 34, 30), 'dark') +

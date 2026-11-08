@@ -41,3 +41,31 @@ test.describe('Explore the bike', () => {
     await expect(page.getByRole('status')).toBeEmpty();
   });
 });
+
+test.describe('Explore the bike: build tray', () => {
+  test('open the tray, swap to rim brakes and see the bike change without the page moving', async ({ page }) => {
+    await page.goto('/bike');
+    const toggle = page.getByRole('button', { name: /^Build/ });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    const before = await page.evaluate(() => window.scrollY);
+    await page.getByRole('radiogroup', { name: 'Brakes' }).getByRole('radio', { name: 'Rim' }).click();
+
+    await expect(page.getByRole('button', { name: 'Rim brake calliper, Brakes' })).toBeVisible();
+    await expect(page.locator('[data-frag="rotor-f"]')).toHaveCount(0); // rolled away, then removed
+    await expect(toggle).toHaveAccessibleName('Build, 1 changed');
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+
+    await page.getByRole('button', { name: 'Rim brake calliper, Brakes' }).click();
+    await expect(page.getByRole('status')).toContainText('sides of the rim');
+  });
+
+  test('deep rims redraw the wheels once the spin settles', async ({ page }) => {
+    await page.goto('/bike');
+    await page.getByRole('button', { name: /^Build/ }).click();
+    const rim = page.locator('[data-frag="rim-f"] .bx-lift');
+    const shallow = await rim.innerHTML();
+    await page.getByRole('radiogroup', { name: 'Rims' }).getByRole('radio', { name: 'Deep' }).click();
+    await expect.poll(() => rim.innerHTML()).not.toBe(shallow);
+  });
+});

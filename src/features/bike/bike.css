@@ -55,11 +55,33 @@
 }
 .bx-part.is-active > .bx-lift { filter: var(--bx-lift); }
 
-/* Info card: floats beside the part, or docks under the drawing on narrow hosts */
-.bx-card { position: absolute; z-index: 2; width: min(320px, 90%); pointer-events: none; }
+/* Info card: floats beside the part, or docks in the page's card host on phones */
+.bx-card { position: absolute; z-index: 2; width: min(300px, 90%); pointer-events: none; }
 .bx-card a { pointer-events: auto; }
-.bx--docked .bx-card { position: static; width: auto; margin-top: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
   .bx-part, .bx-ground, .bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: none; }
 }
+
+/* Build swaps (ExplodedBike `build`): leaving parts can't be picked; electronic shifts ring out
+   from the lever and the mechs once. */
+.bx-part.is-leaving { pointer-events: none; }
+.bx .bx-pulse { fill: none; stroke: var(--bike); stroke-width: 2px; vector-effect: non-scaling-stroke; opacity: 0;
+  transform-box: fill-box; transform-origin: center; animation: bx-pulse .9s cubic-bezier(.2, .8, .2, 1) both; pointer-events: none; }
+@keyframes bx-pulse { from { opacity: .9; transform: scale(.25); } to { opacity: 0; transform: scale(1.5); } }
+@media (prefers-reduced-motion: reduce) { .bx-pulses { display: none; } }
+
+/* A build change while apart: parts glide to their new places in the exploded layout. */
+.bx--relayout .bx-part { transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .25s ease; }
+
+/* Zoom (zoomable): the drawing zooms on its own. A chip brings it back to the whole bike. */
+.bx-zoom-reset { position: absolute; right: 12px; bottom: 12px; z-index: 2; height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: var(--bg); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); font: 600 13px/1 var(--f-text); cursor: pointer;
+  animation: bx-chip-in .3s cubic-bezier(.2, .8, .2, 1); }
+.bx-zoom-reset:focus-visible { outline: 2px solid var(--bike); outline-offset: 2px; }
+@keyframes bx-chip-in { from { opacity: 0; transform: translateY(6px); } }
+/* Zoomed: drag the drawing by hand (mouse and pen; fingers pan too). */
+.bx.is-zoomed .bx-svg, .bx.is-zoomed .bx-part { cursor: grab; }
+.bx .bx-svg.is-dragging, .bx .bx-svg.is-dragging .bx-part { cursor: grabbing; }
+.bx-svg { user-select: none; -webkit-user-select: none; }
+@media (prefers-reduced-motion: reduce) { .bx--relayout .bx-part { transition: none; } .bx-zoom-reset { animation: none; } }

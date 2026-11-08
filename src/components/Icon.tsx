@@ -17,6 +17,9 @@ const PATHS = {
   thumb: <path d="M12 4 21 19.5H3z" />,
   expand: <path d="M14.5 4H20v5.5M20 4l-6 6M9.5 20H4v-5.5M4 20l6-6" />,
   collapse: <path d="M20 4l-6 6M14 4.5V10h5.5M4 20l6-6M10 19.5V14H4.5" />,
+  build: <><path d="M4 7h8.5M16.5 7H20M4 17h3.5M11.5 17H20" /><circle cx="14.5" cy="7" r="2" /><circle cx="9.5" cy="17" r="2" /></>,
+  chevron: <path d="M7 10l5 5 5-5" />,
+  rotate: <><rect x="3.5" y="8.5" width="11" height="12" rx="2" transform="rotate(-90 9 14.5)" /><path d="M13 3.5a7 7 0 0 1 7 6.5M20 10l1.6-2.4M20 10l-2.6-1.3" /></>,
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.6v.1" /></>,
 } as const;
 

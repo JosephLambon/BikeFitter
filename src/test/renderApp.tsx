@@ -5,7 +5,7 @@ import { AppProviders } from '../AppProviders';
 import type { Flag } from '../flags';
 import { routes } from '../routes';
 
-const ENV: Record<Flag, string> = { exploreBike: 'VITE_FLAG_EXPLORE_BIKE' };
+const ENV: Record<Flag, string> = { exploreBike: 'VITE_FLAG_EXPLORE_BIKE', bikeBuild: 'VITE_FLAG_BIKE_BUILD' };
 
 /** Render the whole app at a path, with every flag set explicitly. */
 export function renderApp(path: string, flags: Record<Flag, boolean>) {

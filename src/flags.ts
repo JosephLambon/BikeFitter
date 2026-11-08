@@ -3,6 +3,8 @@
    .env.development turns them on for `npm run dev`. */
 const ENV = {
   exploreBike: 'VITE_FLAG_EXPLORE_BIKE',
+  /** The build panel on Explore the bike: swap gears, brakes, rims, chainrings and mudguards. */
+  bikeBuild: 'VITE_FLAG_BIKE_BUILD',
 } as const;
 
 export type Flag = keyof typeof ENV;

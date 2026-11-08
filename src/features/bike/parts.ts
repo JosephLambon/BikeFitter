@@ -2,10 +2,11 @@
    Ported from designs/shared/bike.js. Copy follows AGENTS.md §1.1 (British English, UK part
    names) and §7 (accuracy). Fit notes cite sources by register id in `sources`. */
 import {
-  AX, B, BAR, BB, FA, J1, J2, JR, PEDAL, PEDAL_ND, RA, RING, RING_S, CRANK, STEM, ST, S,
+  AX, B, BAR, BB, FA, J1, J2, JR, PEDAL, PEDAL_ND, RA, RIM_IN, RIM_IN_DEEP, RING, RING_S, CRANK, STEM, ST, S,
   add, along, capsule, chainPath, circle, dir, draw, fillShape, fwd, hit, mul, P, perp, poly, polar, pt,
-  sDown, sector, slab, teeth, thick, tube, unit,
+  sDown, seatDir, sector, slab, sub, teeth, thick, tube, unit, type Pt,
 } from './drawing';
+import { DEFAULT_BUILD, type Build } from './build';
 import type { SourceId } from '../../content/sources';
 
 export type System = 'Frame' | 'Fork' | 'Cockpit' | 'Contact points' | 'Drivetrain' | 'Brakes' | 'Wheels' | 'Accessories';
@@ -22,6 +23,32 @@ export interface PartCopy {
   lesson?: boolean;
 }
 
+/** What the drawing needs that can change while it animates. */
+export interface DrawCtx {
+  /** Inner edge of the rim, in mm from the axle: RIM_IN (shallow) to RIM_IN_DEEP. */
+  rimIn: number;
+}
+
+/** How a part arrives or leaves when the build changes: where it goes, in mm (y up), and how. */
+export interface Swap {
+  x?: number; y?: number;
+  /** Degrees clockwise, about `about` (default: the part's own origin). */
+  rotate?: number;
+  about?: Pt;
+  scale?: number;
+  /** Draw the part's paths in or out along their length (cables). */
+  draw?: boolean;
+  /** Stagger, in ms. */
+  delay?: number;
+}
+
+/** Copy that replaces the part's own when `when` matches the build. */
+export interface CopyVariant extends Partial<PartCopy> {
+  key: string;
+  name?: string;
+  when: (b: Build) => boolean;
+}
+
 export interface PartDef extends Partial<PartCopy> {
   id: string;
   /** Fragments sharing a group select and move together (front and rear wheel parts). */
@@ -34,10 +61,22 @@ export interface PartDef extends Partial<PartCopy> {
   v: [number, number];
   /** Stagger window: [start, end] of the slider (0..1). */
   w: [number, number];
-  svg: () => string;
+  svg: (d: DrawCtx) => string;
   front?: () => string;
   back?: () => string;
+  /** Only drawn when the build matches. */
+  when?: (b: Build) => boolean;
+  /** Only drawn when there is a build at all (the original drawing leaves it out). */
+  buildOnly?: boolean;
+  /** How it arrives and leaves when the build changes. */
+  swap?: Swap;
 }
+
+const disc = (b: Build) => b.brakes === 'disc', rimB = (b: Build) => b.brakes === 'rim';
+const double = (b: Build) => b.chainrings === 'double';
+const FR_MOUNT = AX(196);
+const RR_MOUNT = along(RA, unit(sub(ST(455), RA)), 352);
+const BACK = perp(seatDir);
 
 const FW: [number, number] = [430, -150], RW: [number, number] = [-430, -150];
 
@@ -100,11 +139,11 @@ export const PARTS: PartDef[] = [
     what: 'The only part of the bike that touches the road.',
     how: 'The air inside it supports your weight. Wider tyres can usually run lower pressures, for more comfort and grip.' },
   { id: 'rim-f', group: 'rim', name: 'Rim', sys: 'Wheels', layer: 1, v: FW, w: [0, 0.45],
-    svg: () => draw.rim(FA),
+    svg: (d) => draw.rim(FA, d.rimIn),
     what: 'The outer hoop of the wheel that holds the tyre.',
     how: 'The tyre’s bead locks into the rim. Deeper rims can be more aerodynamic; shallower ones are usually lighter.' },
   { id: 'spokes-f', group: 'spokes', name: 'Spokes', sys: 'Wheels', layer: 1, v: FW, w: [0, 0.45],
-    svg: () => draw.spokes(FA),
+    svg: (d) => draw.spokes(FA, d.rimIn),
     what: 'Tensioned wires connecting the hub to the rim.',
     how: 'The hub effectively hangs from them. Even tension keeps the wheel true, so it spins straight without wobbling.' },
   { id: 'hub-f', group: 'hub', name: 'Hub', sys: 'Wheels', layer: 1, v: FW, w: [0, 0.45],
@@ -112,36 +151,56 @@ export const PARTS: PartDef[] = [
     what: 'The centre of the wheel, spinning on bearings around the axle.',
     how: 'The rear hub includes a freehub, which drives the wheel when you pedal and lets it freewheel when you stop.' },
   { id: 'valve-f', group: 'valve', name: 'Valve', sys: 'Wheels', layer: 1, v: FW, w: [0, 0.45],
-    svg: () => draw.valve(FA, 232),
+    svg: (d) => draw.valve(FA, 232, d.rimIn),
     what: 'Where you pump up the tyre.',
     how: 'Road bikes use Presta valves: unscrew the small locknut at the tip before pumping, and tighten it again afterwards.' },
   // Wheels: rear
   { id: 'tyre-r', group: 'tyre', name: 'Tyre', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: () => draw.tyre(RA) },
-  { id: 'rim-r', group: 'rim', name: 'Rim', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: () => draw.rim(RA) },
-  { id: 'spokes-r', group: 'spokes', name: 'Spokes', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: () => draw.spokes(RA) },
+  { id: 'rim-r', group: 'rim', name: 'Rim', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: (d) => draw.rim(RA, d.rimIn) },
+  { id: 'spokes-r', group: 'spokes', name: 'Spokes', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: (d) => draw.spokes(RA, d.rimIn) },
   { id: 'hub-r', group: 'hub', name: 'Hub', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: () => draw.hub(RA, true) },
-  { id: 'valve-r', group: 'valve', name: 'Valve', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: () => draw.valve(RA, 300) },
-  { id: 'thru-f', group: 'thru', name: 'Thru-axle', sys: 'Wheels', layer: 8, v: [160, -430], w: [0.35, 0.85],
+  { id: 'valve-r', group: 'valve', name: 'Valve', sys: 'Wheels', layer: 1, v: RW, w: [0, 0.45], svg: (d) => draw.valve(RA, 300, d.rimIn) },
+  { id: 'thru-f', group: 'thru', name: 'Thru-axle', sys: 'Wheels', layer: 8, v: [160, -430], w: [0.35, 0.85], when: disc, swap: { scale: 2.2, delay: 120 },
     svg: () => draw.thru(FA),
     what: 'A bolt-through axle that holds the wheel in the fork or frame.',
     how: 'It slides through one dropout and the hub, then threads into the other side, locating the wheel firmly.' },
-  { id: 'thru-r', group: 'thru', name: 'Thru-axle', sys: 'Wheels', layer: 8, v: [-150, -40], w: [0.35, 0.85], svg: () => draw.thru(RA) },
+  { id: 'thru-r', group: 'thru', name: 'Thru-axle', sys: 'Wheels', layer: 8, v: [-150, -40], w: [0.35, 0.85], when: disc, swap: { scale: 2.2, delay: 180 }, svg: () => draw.thru(RA) },
+  { id: 'qr-f', group: 'qr', name: 'Quick-release skewer', sys: 'Wheels', layer: 8, v: [160, -430], w: [0.35, 0.85], when: rimB,
+    swap: { rotate: -150, about: FA, delay: 380 },
+    svg: () => draw.qr(FA, 118),
+    what: 'A thin rod with a cam lever that clamps the wheel into open dropouts.',
+    how: 'Closing the lever squeezes the hub between the dropouts. It is the usual axle on rim-brake road bikes; most disc-brake road bikes use thru-axles instead.' },
+  { id: 'qr-r', group: 'qr', name: 'Quick-release skewer', sys: 'Wheels', layer: 8, v: [-150, -40], w: [0.35, 0.85], when: rimB,
+    swap: { rotate: -150, about: RA, delay: 440 }, svg: () => draw.qr(RA, 52) },
 
   // Brakes (on the non-drive side, so drawn behind the wheels)
-  { id: 'rotor-f', group: 'rotor', name: 'Rotor (disc)', sys: 'Brakes', layer: 0, v: [190, 260], w: [0.3, 0.8],
+  { id: 'rotor-f', group: 'rotor', name: 'Rotor (disc)', sys: 'Brakes', layer: 0, v: [190, 260], w: [0.3, 0.8], when: disc,
+    swap: { x: 420, rotate: 270, about: FA, delay: 60 },
     svg: () => draw.rotor(FA, 80),
     what: 'The steel disc bolted to the hub that the brake pads grip.',
     how: 'It sits on the left (non-drive) side of each wheel. Larger rotors give more braking power and shed heat better.' },
-  { id: 'rotor-r', group: 'rotor', name: 'Rotor (disc)', sys: 'Brakes', layer: 0, v: [-70, 250], w: [0.3, 0.8], svg: () => draw.rotor(RA, 70) },
-  { id: 'calliper-f', group: 'calliper', name: 'Brake calliper', sys: 'Brakes', layer: 0, v: [120, 330], w: [0.35, 0.85],
+  { id: 'rotor-r', group: 'rotor', name: 'Rotor (disc)', sys: 'Brakes', layer: 0, v: [-70, 250], w: [0.3, 0.8], when: disc,
+    swap: { x: -420, rotate: -270, about: RA, delay: 60 }, svg: () => draw.rotor(RA, 70) },
+  { id: 'calliper-f', group: 'calliper', name: 'Brake calliper', sys: 'Brakes', layer: 0, v: [120, 330], w: [0.35, 0.85], when: disc, swap: { y: -90 },
     svg: () => draw.calliper(polar(FA, 72, 150), 150),
     what: 'Squeezes the brake pads against the rotor to slow the wheel.',
     how: 'On a hydraulic system, pulling the lever pushes fluid along the hose, forcing pistons in the calliper to press the pads onto the rotor.' },
-  { id: 'calliper-r', group: 'calliper', name: 'Brake calliper', sys: 'Brakes', layer: 0, v: [10, 330], w: [0.35, 0.85], svg: () => draw.calliper(polar(RA, 63, 25), 25) },
-  { id: 'hose', name: 'Brake hose', sys: 'Brakes', layer: 5, v: [140, 390], w: [0.2, 0.75],
+  { id: 'calliper-r', group: 'calliper', name: 'Brake calliper', sys: 'Brakes', layer: 0, v: [10, 330], w: [0.35, 0.85], when: disc, swap: { y: -90 }, svg: () => draw.calliper(polar(RA, 63, 25), 25) },
+  { id: 'hose', name: 'Brake hose', sys: 'Brakes', layer: 5, v: [140, 390], w: [0.2, 0.75], when: disc, swap: { draw: true },
     svg: () => thick('M' + S(B(-6, -16)) + 'C' + S(pt(452, 586)) + ' ' + S(pt(430, 580)) + ' ' + S(along(AX(-12), fwd, 20)), 6, 'dark'),
     what: 'Carries hydraulic fluid from the lever to the calliper.',
     how: 'On many modern road bikes it runs inside the handlebar, stem or frame, so only a short loop is visible.' },
+  { id: 'rimbrake-f', group: 'rimbrake', name: 'Rim brake calliper', sys: 'Brakes', layer: 8, v: [120, 330], w: [0.35, 0.85], when: rimB,
+    swap: { y: 160, delay: 200 },
+    svg: () => draw.rimCalliper(FA, FR_MOUNT),
+    what: 'Squeezes brake pads against the sides of the rim to slow the wheel.',
+    how: 'Pulling the lever pulls a cable, which closes the calliper’s arms. At the front it bolts through the fork crown; at the back, to a bridge between the seat stays.' },
+  { id: 'rimbrake-r', group: 'rimbrake', name: 'Rim brake calliper', sys: 'Brakes', layer: 8, v: [10, 330], w: [0.35, 0.85], when: rimB,
+    swap: { y: 160, delay: 280 }, svg: () => draw.rimCalliper(RA, RR_MOUNT) },
+  { id: 'brakecable', name: 'Brake cable', sys: 'Brakes', layer: 5, v: [140, 390], w: [0.2, 0.75], when: rimB, swap: { draw: true, delay: 420 },
+    svg: () => thick('M' + S(B(-6, -16)) + 'C' + S(pt(530, 590)) + ' ' + S(pt(476, 450)) + ' ' + S(along(FR_MOUNT, unit(sub(FR_MOUNT, FA)), 24)), 6, 'dark'),
+    what: 'A steel inner cable inside an outer housing, running from the lever to the calliper.',
+    how: 'Pulling the lever pulls the inner cable, which closes the calliper. Cables stretch over time, so brakes need the occasional adjustment.' },
 
   // Cockpit
   { id: 'headset', name: 'Headset', sys: 'Cockpit', layer: 5, v: [-25, 80], w: [0.2, 0.75],
@@ -190,6 +249,15 @@ export const PARTS: PartDef[] = [
     how: 'Pulling the lever brakes. Sideways movements or buttons change gear, depending on the brand. The rubber hoods are a common hand position.',
     fit: 'Where the levers sit on the bar affects your reach to the hoods.', lesson: true },
 
+  { id: 'gearcable-f', group: 'gearcable', name: 'Gear cable', sys: 'Drivetrain', layer: 5, v: [200, 360], w: [0.25, 0.88],
+    when: (b) => b.gears === 'mechanical', buildOnly: true, swap: { draw: true, delay: 80 },
+    svg: () => thick('M' + S(B(-2, -26)) + 'C' + S(pt(540, 560)) + ' ' + S(pt(470, 420)) + ' ' + S(pt(392, 392)), 5, 'dark'),
+    what: 'A steel inner cable inside an outer housing that links a gear lever to a mech.',
+    how: 'Each click of the lever pulls or releases a set length of cable, which moves the mech. Cables stretch over time, so shifting needs the occasional adjustment.' },
+  { id: 'gearcable-r', group: 'gearcable', name: 'Gear cable', sys: 'Drivetrain', layer: 5, v: [60, -300], w: [0.45, 1],
+    when: (b) => b.gears === 'mechanical', buildOnly: true, swap: { draw: true, delay: 200 },
+    svg: () => thick('M' + S(pt(-330, 58)) + 'C' + S(pt(-300, 0)) + ' ' + S(pt(-400, -20)) + ' ' + S(add(RA, pt(-30, -40))), 5, 'dark') },
+
   // Contact points
   { id: 'seatpost', name: 'Seatpost', sys: 'Contact points', layer: 0, v: [-55, 190], w: [0.15, 0.7],
     svg: () => tube(ST(390), ST(672), 27.2, 27.2, 'dark') + fillShape(capsule(pt(-222, 652), pt(-170, 652), 24), 'dark'),
@@ -226,9 +294,12 @@ export const PARTS: PartDef[] = [
     svg: () => fillShape(circle(BB, 23), 'metal-hi') + fillShape(circle(BB, 13), 'dark'),
     what: 'The bearings and axle that the chainset turns on.',
     how: 'It fits inside the frame’s bottom bracket shell. Different standards are threaded or press-fit.' },
+  { id: 'smallring', group: 'chainset', name: 'Chainset', sys: 'Drivetrain', layer: 6, v: [130, -330], w: [0.4, 0.95], when: double,
+    swap: { x: 360, y: -40, rotate: 200, about: BB },
+    svg: () => fillShape(circle(BB, RING_S + 1) + circle(BB, RING_S - 10), 'metal') + teeth(BB, RING_S + 2, 34, 4) },
   { id: 'chainset', name: 'Chainset', sys: 'Drivetrain', layer: 6, v: [130, -330], w: [0.4, 0.95],
     svg: () => {
-      let s = fillShape(circle(BB, RING_S + 1) + circle(BB, RING_S - 10), 'metal') + teeth(BB, RING_S + 2, 34, 4);
+      let s = '';
       for (let i = 0; i < 4; i++) { const a = CRANK + 45 + i * 90; s += fillShape(capsule(polar(BB, 10, a), polar(BB, 84, a), 26, 18), 'metal-hi'); }
       s += fillShape(circle(BB, RING + 2) + circle(BB, RING - 14), 'metal') + teeth(BB, RING + 3.5, 50, 5);
       for (let i = 0; i < 4; i++) s += P(circle(polar(BB, 55, CRANK + 45 + i * 90), 5), 'm-dark');
@@ -266,12 +337,29 @@ export const PARTS: PartDef[] = [
     front: () => fillShape(capsule(J1, J2, 24, 26), 'metal') + fillShape(circle(J1, 5), 'metal-hi') + fillShape(circle(J2, 5), 'metal-hi'),
     what: 'Moves the chain across the cassette’s sprockets.',
     how: 'A sprung cage with two jockey wheels guides the chain and keeps it under tension as you change gear.' },
-  { id: 'frontmech', name: 'Front mech', sys: 'Drivetrain', layer: 8, v: [-120, 140], w: [0.5, 1],
+  { id: 'frontmech', name: 'Front mech', sys: 'Drivetrain', layer: 8, v: [-120, 140], w: [0.5, 1], when: double, swap: { x: -60, y: 200, rotate: -25, delay: 120 },
     svg: () => fillShape(capsule(ST(150), ST(186), 22, 22), 'dark') + fillShape(sector(BB, RING + 7, RING + 22, 96, 134), 'metal'),
     what: 'Moves the chain between the chainrings.',
     how: 'A cage either side of the chain pushes it sideways onto the larger or smaller ring when you change gear.' },
 
+  { id: 'battery-r', group: 'battery', name: 'Battery', sys: 'Drivetrain', layer: 7, v: [140, -420], w: [0.45, 1],
+    when: (b) => b.gears === 'electronic', swap: { y: 220, delay: 160 },
+    svg: () => draw.battery(add(RA, pt(-60, -40)), add(RA, pt(-60, -74))),
+    what: 'Powers an electronic mech.',
+    how: 'Some electronic groupsets clip a small battery onto each mech; others use one battery hidden in the frame or seatpost. Either way, it needs charging.' },
+  { id: 'battery-f', group: 'battery', name: 'Battery', sys: 'Drivetrain', layer: 8, v: [-120, 200], w: [0.5, 1],
+    when: (b) => b.gears === 'electronic' && double(b), swap: { y: 220, delay: 240 },
+    svg: () => draw.battery(along(ST(158), BACK, 30), along(ST(188), BACK, 30)) },
+
   // Accessories
+  { id: 'mudguard-f', group: 'mudguards', name: 'Mudguards', sys: 'Accessories', layer: 2, v: [470, 40], w: [0.05, 0.55],
+    when: (b) => b.mudguards === 'on', swap: { rotate: -120, about: FA },
+    svg: () => draw.mudguard(FA, 12, 205, 28),
+    what: 'Curved guards over the wheels that keep road spray off you and the bike.',
+    how: 'They bolt to mounts on the frame and fork, held steady by thin stays. They need clearance around the tyre, so not every frame takes them.' },
+  { id: 'mudguard-r', group: 'mudguards', name: 'Mudguards', sys: 'Accessories', layer: 2, v: [-470, 40], w: [0.05, 0.55],
+    when: (b) => b.mudguards === 'on', swap: { rotate: 120, about: RA, delay: 90 },
+    svg: () => draw.mudguard(RA, -25, 165, 155) },
   { id: 'cage', name: 'Bottle cage', sys: 'Accessories', layer: 5, v: [-140, 140], w: [0.3, 0.9],
     svg: () => {
       const u = unit(AX(140)), n = perp(u), q = (s: number, o: number) => add(mul(u, s), mul(n, o));
@@ -283,26 +371,55 @@ export const PARTS: PartDef[] = [
     how: 'It bolts to threaded mounts on the frame.' },
 ];
 
+/** Copy for parts that work differently in some builds. */
+export const VARIANT_COPY: readonly CopyVariant[] = [
+  { key: 'levers', when: (b) => b.gears === 'electronic',
+    how: 'Pulling the lever brakes. Buttons on the lever send a signal to the mechs, by wire or wirelessly depending on the system. The rubber hoods are a common hand position.' },
+  { key: 'rearmech', when: (b) => b.gears === 'electronic',
+    how: 'A small motor moves the sprung cage when you press a button, instead of a cable pulling it. Two jockey wheels guide the chain and keep it under tension.' },
+  { key: 'frontmech', when: (b) => b.gears === 'electronic',
+    how: 'A small motor swings the cage to push the chain onto the larger or smaller ring when you press a button.' },
+  { key: 'chainset', when: (b) => b.chainrings === 'single',
+    how: 'Your pedalling force goes through the crank arms to a single chainring, which drives the chain. With one ring there is no front mech, and the cassette usually has a wider range to make up for it.' },
+  { key: 'rim', when: (b) => b.rims === 'deep' && b.brakes === 'rim',
+    what: 'A deep-section rim: a tall outer hoop that holds the tyre.',
+    how: 'The tyre’s bead locks into the rim, and its sides are the braking surface for rim brakes. Deeper rims can be more aerodynamic; shallower ones are usually lighter.' },
+  { key: 'rim', when: (b) => b.rims === 'deep',
+    what: 'A deep-section rim: a tall outer hoop that holds the tyre.' },
+  { key: 'rim', when: (b) => b.brakes === 'rim',
+    how: 'The tyre’s bead locks into the rim, and its sides are the braking surface for rim brakes. Deeper rims can be more aerodynamic; shallower ones are usually lighter.' },
+];
+
 /** One drawn fragment. Fragments sharing `key` select and move together. */
 export interface Fragment { key: string; fragId: string; layer: number; part: PartDef; markup: string }
 
 /** A selectable part: the group key, with the copy from whichever fragment carries it. */
 export interface PartInfo extends PartCopy { key: string; name: string; sys: System }
 
-function build() {
+/** Cables draw along their length, so their paths measure 1. */
+const drawable = (p: PartDef, m: string) => (p.swap?.draw ? m.replace(/<path /g, '<path pathLength="1" ') : m);
+
+function makeFragments(d: DrawCtx): Fragment[] {
   const frags: Fragment[] = [];
-  const info = new Map<string, PartInfo>();
   for (const p of PARTS) {
     const key = p.group ?? p.id;
     if (p.back) frags.push({ key, fragId: p.id, layer: 0, part: p, markup: p.back() });
-    frags.push({ key, fragId: p.id, layer: p.layer, part: p, markup: p.svg() });
+    frags.push({ key, fragId: p.id, layer: p.layer, part: p, markup: drawable(p, p.svg(d)) });
     if (p.front) frags.push({ key, fragId: p.id, layer: 8, part: p, markup: p.front() });
+  }
+  // Stable sort by layer keeps the prototype's draw order within each layer.
+  return frags.sort((a, b) => a.layer - b.layer);
+}
+
+function build() {
+  const frags = makeFragments({ rimIn: RIM_IN });
+  const info = new Map<string, PartInfo>();
+  for (const p of PARTS) {
+    const key = p.group ?? p.id;
     if (p.what && p.how && !info.has(key)) {
       info.set(key, { key, name: p.name, sys: p.sys, what: p.what, how: p.how, fit: p.fit, sources: p.sources, lesson: p.lesson });
     }
   }
-  // Stable sort by layer keeps the prototype's draw order within each layer.
-  frags.sort((a, b) => a.layer - b.layer);
   const parts = [...info.values()].sort((a, b) => SYSTEM_ORDER.indexOf(a.sys) - SYSTEM_ORDER.indexOf(b.sys));
   return { frags, parts };
 }
@@ -313,3 +430,44 @@ export const FRAGMENTS: readonly Fragment[] = built.frags;
 /** Every selectable part, in system order. This is also the keyboard order. */
 export const PART_LIST: readonly PartInfo[] = built.parts;
 export const PART_BY_KEY: ReadonlyMap<string, PartInfo> = new Map(PART_LIST.map((p) => [p.key, p]));
+
+const WHEEL_PART = /^(?:tyre|rim|spokes|hub|valve)-([fr])$/;
+/** The piece a part moves with when the bike comes apart (AGENTS.md §5.1). The frame is one
+    welded or moulded piece. A wheel's tyre, rim, spokes, hub and valve stay nested in each other,
+    like a wheel off the bike. Every other part is a piece of its own. */
+export function unitOf(p: PartDef): string {
+  if (p.sys === 'Frame') return 'frame';
+  const m = WHEEL_PART.exec(p.id);
+  return m ? 'wheel-' + m[1] : p.id;
+}
+
+/** Is this fragment on the bike for the build? Without a build: the original drawing. */
+export const inBuild = (part: PartDef, b?: Build) => (b ? !part.when || part.when(b) : !part.buildOnly && (!part.when || part.when(DEFAULT_BUILD)));
+
+const drawnCache = new Map<number, readonly Fragment[]>([[0, FRAGMENTS]]);
+/** Every fragment (whatever the build), drawn with the rim `depth` of the way from shallow (0) to deep (1). */
+export function drawnFragments(depth: number): readonly Fragment[] {
+  const k = Math.round(Math.max(0, Math.min(1, depth)) * 1000) / 1000;
+  let f = drawnCache.get(k);
+  if (!f) {
+    f = makeFragments({ rimIn: RIM_IN + (RIM_IN_DEEP - RIM_IN) * k });
+    if (k === 1) drawnCache.set(k, f);
+  }
+  return f;
+}
+
+/** The fragments on the bike for a build, in draw order. */
+export const fragmentsFor = (b?: Build, depth = b?.rims === 'deep' ? 1 : 0) => drawnFragments(depth).filter((f) => inBuild(f.part, b));
+
+/** The selectable parts on the bike for a build, in keyboard order. */
+export function partsFor(b?: Build): PartInfo[] {
+  const keys = new Set(FRAGMENTS.filter((f) => inBuild(f.part, b)).map((f) => f.key));
+  return PART_LIST.filter((p) => keys.has(p.key)).map((p) => partInfo(p.key, b));
+}
+
+/** A part's copy for a build: the first matching variant's fields replace its own. */
+export function partInfo(key: string, b?: Build): PartInfo {
+  const base = PART_BY_KEY.get(key)!;
+  const v = b && VARIANT_COPY.find((x) => x.key === key && x.when(b));
+  return v ? { ...base, ...Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'when' && k !== 'key')) } : base;
+}

@@ -1,8 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExplodedBike } from './ExplodedBike';
-import { PART_LIST } from './parts';
+import { DEFAULT_BUILD } from './build';
+import { partsFor } from './parts';
+
+const PART_LIST = partsFor();
 
 const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ',') });
 const card = () => screen.getByRole('status');
@@ -70,10 +73,10 @@ describe('ExplodedBike', () => {
     const { rerender, container } = render(<ExplodedBike progress={0} />);
     const saddle = () => container.querySelector('[data-frag="saddle"]')!;
     const frame = () => container.querySelector('[data-frag="toptube"]')!;
-    expect(saddle()).not.toHaveAttribute('transform');
+    expect(saddle()).not.toHaveAttribute('style');
     rerender(<ExplodedBike progress={1} />);
-    expect(saddle()).toHaveAttribute('transform', 'translate(-100 -350)');
-    expect(frame()).not.toHaveAttribute('transform');
+    expect(saddle()).toHaveStyle({ transform: 'translate(-100px, -350px)' });
+    expect(frame()).not.toHaveAttribute('style');
   });
 
   it('is a plain picture when not interactive', () => {
@@ -81,5 +84,81 @@ describe('ExplodedBike', () => {
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: /road bike/i })).toBeInTheDocument();
+  });
+
+  describe('with a build', () => {
+    it('draws only the parts the build has, each one a button', () => {
+      const b = { ...DEFAULT_BUILD, brakes: 'rim' as const };
+      const { container } = render(<ExplodedBike progress={0} build={b} />);
+      expect(screen.getAllByRole('button')).toHaveLength(partsFor(b).length);
+      expect(part('Rim brake calliper')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Rotor/ })).not.toBeInTheDocument();
+      expect(container.querySelector('[data-frag="rotor-f"]')).not.toBeInTheDocument();
+    });
+
+    it('swaps parts when the build changes, and clears a selection that left the bike', async () => {
+      const onSelect = vi.fn();
+      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} onSelect={onSelect} />);
+      await userEvent.click(part('Front mech'));
+      expect(card()).toHaveTextContent('Front mech');
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, chainrings: 'single' }} onSelect={onSelect} />);
+      expect(card()).toBeEmptyDOMElement();
+      expect(onSelect).toHaveBeenLastCalledWith(null);
+      expect(container.querySelector('[data-frag="frontmech"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-frag="smallring"]')).not.toBeInTheDocument();
+    });
+
+    it('keeps a selection that is still on the bike, with copy for the new build', async () => {
+      const { rerender } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+      await userEvent.click(part('Brake and gear levers'));
+      expect(card()).not.toHaveTextContent('signal');
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} />);
+      expect(card()).toHaveTextContent('Brake and gear levers');
+      expect(card()).toHaveTextContent('signal');
+    });
+
+    it('redraws the rims deeper for deep-section rims', () => {
+      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+      const rim = () => container.querySelector('[data-frag="rim-f"] .bx-lift')!.innerHTML;
+      const shallow = rim();
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, rims: 'deep' }} />);
+      expect(rim()).not.toBe(shallow);
+    });
+
+    describe('when the browser can animate', () => {
+      let finish: (() => void)[];
+      beforeEach(() => {
+        finish = [];
+        Element.prototype.animate = vi.fn(function () {
+          let done!: () => void;
+          const finished = new Promise<void>((r) => { done = r; });
+          finish.push(done);
+          return { finished, cancel: () => {} } as unknown as Animation;
+        });
+        Element.prototype.getAnimations = () => [];
+      });
+      afterEach(() => {
+        delete (Element.prototype as Partial<Element>).animate;
+        delete (Element.prototype as Partial<Element>).getAnimations;
+      });
+
+      it('keeps leaving parts drawn, but not selectable, until they have gone', async () => {
+        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, brakes: 'rim' }} />);
+        const rotor = () => container.querySelector('[data-frag="rotor-f"]');
+        expect(rotor()).toHaveClass('is-leaving');
+        expect(rotor()).not.toHaveAttribute('role');
+        expect(part('Rim brake calliper')).toBeInTheDocument();
+        await act(async () => { finish.forEach((f) => f()); });
+        expect(rotor()).not.toBeInTheDocument();
+      });
+
+      it('rings out a signal from the lever and mechs when the gears go electronic', () => {
+        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+        expect(container.querySelector('.bx-pulse')).not.toBeInTheDocument();
+        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} />);
+        expect(container.querySelectorAll('.bx-pulse')).toHaveLength(3);
+      });
+    });
   });
 });

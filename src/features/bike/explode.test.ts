@@ -46,25 +46,52 @@ describe('fitViewBox', () => {
 
 describe('placeCard', () => {
   const host = { left: 0, top: 0, width: 1000 };
-  const card = { width: 200, height: 100 };
-  const stageBottom = 600;
-  it('puts the card to the right of the part when it fits', () => {
-    expect(placeCard({ left: 100, top: 100, right: 200, bottom: 200 }, host, stageBottom, card)).toEqual({ left: 220, top: 100 });
+  const stageBottom = 600, card = { width: 300, height: 200 };
+  const hit = (pos: { left: number; top: number }, r: { left: number; top: number; right: number; bottom: number }) =>
+    pos.left < r.right && pos.left + card.width > r.left && pos.top < r.bottom && pos.top + card.height > r.top;
+
+  it('sits beside the part when there is room, covering nothing', () => {
+    const part = { left: 100, top: 100, right: 200, bottom: 200 };
+    const pos = placeCard(part, [], host, stageBottom, card);
+    expect(hit(pos, part)).toBe(false);
+    expect(pos.left).toBeLessThan(260); // close to the part, not at the far side of the stage
   });
-  it('falls back to the left when the right is too close to the edge', () => {
-    expect(placeCard({ left: 700, top: 100, right: 900, bottom: 200 }, host, stageBottom, card)).toEqual({ left: 480, top: 100 });
+
+  it('never covers the selected part, even when that means covering others', () => {
+    const part = { left: 0, top: 0, right: 1000, bottom: 380 };
+    const others = [{ left: 0, top: 390, right: 1000, bottom: 600 }];
+    const pos = placeCard(part, others, host, stageBottom, card);
+    expect(hit(pos, part)).toBe(false);
+    expect(pos).toMatchObject({ clear: true, covers: 1 });
   });
-  it('goes below when neither side fits', () => {
-    expect(placeCard({ left: 100, top: 50, right: 900, bottom: 150 }, host, stageBottom, card)).toEqual({ left: 400, top: 170 });
+
+  it('says when no place misses the selected part, so the card can change shape', () => {
+    expect(placeCard({ left: 0, top: 0, right: 1000, bottom: 600 }, [], host, stageBottom, card).clear).toBe(false);
   });
-  it('goes above when nothing else fits', () => {
-    expect(placeCard({ left: 100, top: 300, right: 900, bottom: 560 }, host, stageBottom, card)).toEqual({ left: 400, top: 180 });
+
+  it('covers as few other parts as it can', () => {
+    const part = { left: 450, top: 250, right: 550, bottom: 350 };
+    // Parts everywhere except the top-right corner.
+    const others = [
+      { left: 0, top: 0, right: 400, bottom: 240 }, { left: 0, top: 360, right: 1000, bottom: 600 },
+      { left: 0, top: 240, right: 440, bottom: 360 }, { left: 560, top: 240, right: 1000, bottom: 360 },
+    ];
+    const pos = placeCard(part, others, host, stageBottom, card);
+    expect(others.filter((o) => hit(pos, o))).toHaveLength(0);
+    expect(hit(pos, part)).toBe(false);
   });
-  it('overlaps the part, kept inside the stage, as a last resort', () => {
-    expect(placeCard({ left: 0, top: 0, right: 1000, bottom: 600 }, host, stageBottom, card)).toEqual({ left: 400, top: 250 });
+
+  it('keeps its previous place when that is still as good, so it does not jitter', () => {
+    const part = { left: 450, top: 250, right: 550, bottom: 350 };
+    const prev = { left: 40, top: 30 };
+    expect(placeCard(part, [], host, stageBottom, card, prev)).toMatchObject(prev);
   });
-  it('keeps the card inside the stage vertically', () => {
-    expect(placeCard({ left: 100, top: 0, right: 200, bottom: 20 }, host, stageBottom, card).top).toBe(8);
+
+  it('stays inside the stage', () => {
+    const pos = placeCard({ left: 900, top: 500, right: 1000, bottom: 600 }, [], host, stageBottom, card);
+    expect(pos.left).toBeGreaterThanOrEqual(8);
+    expect(pos.left + card.width).toBeLessThanOrEqual(992);
+    expect(pos.top + card.height).toBeLessThanOrEqual(592);
   });
 });
 

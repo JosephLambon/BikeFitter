@@ -28,26 +28,67 @@ export function fitViewBox(b: Box, progress: number, aspect: number, anchorBotto
 
 export interface Rect { left: number; top: number; right: number; bottom: number }
 
-/** Where the floating info card goes: right of the part, else left, below, above, or over it. */
+const area = (a: Rect, b: Rect) =>
+  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+
+/** Where the floating info card goes. The rule (AGENTS.md §5.1): it avoids the selected
+    part, and it covers as few other parts as it can. Among equally good places it stays where
+    it was (no jitter), then sits as close to the part as it can. Rects are in client pixels;
+    the result is relative to the host. */
 export function placeCard(
-  part: Rect,
+  part: Rect | readonly Rect[],
+  others: readonly Rect[],
   host: { left: number; top: number; width: number },
   stageBottom: number,
   card: { width: number; height: number },
-  gap = 20,
+  prev?: { left: number; top: number } | null,
+  gap = 8,
 ) {
   const cw = card.width, ch = card.height;
-  const minX = 8, maxX = host.width - cw - 8, minY = 8, maxY = Math.max(8, stageBottom - host.top - ch - 8);
-  const cx = (part.left + part.right) / 2 - host.left, cy = (part.top + part.bottom) / 2 - host.top;
-  const right = part.right - host.left + gap, left = part.left - host.left - cw - gap;
-  const below = part.bottom - host.top + gap, above = part.top - host.top - ch - gap;
-  let x: number, y: number;
-  if (right <= maxX) { x = right; y = clamp(cy - ch / 2, minY, maxY); }
-  else if (left >= minX) { x = left; y = clamp(cy - ch / 2, minY, maxY); }
-  else if (below <= maxY) { x = clamp(cx - cw / 2, minX, maxX); y = below; }
-  else if (above >= minY) { x = clamp(cx - cw / 2, minX, maxX); y = above; }
-  else { x = clamp(cx - cw / 2, minX, maxX); y = clamp(cy - ch / 2, minY, maxY); }
-  return { left: Math.round(x), top: Math.round(y) };
+  const minX = 8, maxX = Math.max(8, host.width - cw - 8), minY = 8, maxY = Math.max(8, stageBottom - host.top - ch - 8);
+  const mine = (Array.isArray(part) ? part : [part]) as readonly Rect[];
+  const ps = mine.map((r) => ({ left: r.left - host.left, top: r.top - host.top, right: r.right - host.left, bottom: r.bottom - host.top }));
+  const guards = ps.map((r) => ({ left: r.left - gap, top: r.top - gap, right: r.right + gap, bottom: r.bottom + gap }));
+  // The nearest of the part's pieces anchors the side candidates and the distance.
+  const p = ps[0];
+  const os = others.map((o) => ({ left: o.left - host.left, top: o.top - host.top, right: o.right - host.left, bottom: o.bottom - host.top }));
+  const pcx = (p.left + p.right) / 2, pcy = (p.top + p.bottom) / 2;
+
+  const score = (x: number, y: number) => {
+    const r: Rect = { left: x, top: y, right: x + cw, bottom: y + ch };
+    let n = 0, a = 0;
+    for (const o of os) { const k = area(r, o); if (k > 0) { n++; a += k; } }
+    const d = Math.hypot(x + cw / 2 - pcx, y + ch / 2 - pcy);
+    let g = 0;
+    for (const q of guards) g += area(r, q);
+    return [g, n, Math.round(a / 400), d] as const;
+  };
+  const better = (s: readonly number[], t: readonly number[]) => {
+    for (let i = 0; i < s.length; i++) if (s[i] !== t[i]) return s[i] < t[i];
+    return false;
+  };
+
+  // Candidates: hugging each side of the part, and a grid over the whole stage.
+  const cands: [number, number][] = [
+    [p.right + gap, pcy - ch / 2], [p.left - gap - cw, pcy - ch / 2], [pcx - cw / 2, p.bottom + gap], [pcx - cw / 2, p.top - gap - ch],
+  ];
+  const step = 16;
+  for (let y = minY; y <= maxY; y += step) for (let x = minX; x <= maxX; x += step) cands.push([x, y]);
+  cands.push([maxX, maxY], [minX, maxY], [maxX, minY]);
+
+  let best: [number, number] | null = null, bestS: readonly number[] = [];
+  for (const [cx, cy] of cands) {
+    const x = clamp(cx, minX, maxX), y = clamp(cy, minY, maxY), s = score(x, y);
+    if (!best || better(s, bestS)) { best = [x, y]; bestS = s; }
+  }
+  if (prev) {
+    const x = clamp(prev.left, minX, maxX), y = clamp(prev.top, minY, maxY), s = score(x, y);
+    // Same coverage as the best (ignoring distance): stay put.
+    if (s[0] <= bestS[0] && s[1] <= bestS[1] && s[2] <= bestS[2]) { best = [x, y]; bestS = s; }
+  }
+  const final = score(best![0], best![1]);
+  /* `clear`: the card misses the selected part entirely. */
+  return { left: Math.round(best![0]), top: Math.round(best![1]), clear: final[0] === 0, covers: final[1] };
 }
 
 /** Scroll position through the reel mapped to explode progress. The first 10% of travel

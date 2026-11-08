@@ -13,6 +13,6 @@ export default defineConfig({
     command: `npx vite --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    env: { VITE_FLAG_EXPLORE_BIKE: 'true' },
+    env: { VITE_FLAG_EXPLORE_BIKE: 'true', VITE_FLAG_BIKE_BUILD: 'true' },
   },
 });
