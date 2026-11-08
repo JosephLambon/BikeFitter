@@ -7,6 +7,8 @@ const ENV = {
   bikeBuild: 'VITE_FLAG_BIKE_BUILD',
   /** Portrait phones on Explore the bike: the part drawer at the thumb, over a screen-high bench wall. */
   bikeDrawer: 'VITE_FLAG_BIKE_DRAWER',
+  /** The coil-spring explode scrubber on Explore the bike, with its "try me" tug. Off: the gear cable. */
+  bikeCoil: 'VITE_FLAG_BIKE_COIL',
 } as const;
 
 export type Flag = keyof typeof ENV;

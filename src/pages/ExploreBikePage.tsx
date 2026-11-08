@@ -13,6 +13,7 @@ import { Wrap } from '../components/layout';
 import { ExplodedBike } from '../features/bike/ExplodedBike';
 import { caughtUp, clamp, headBlend, reelProgress } from '../features/bike/explode';
 import { ExplodeScrubber, SCRUBBER_H } from '../features/bike/ExplodeScrubber';
+import { CoilScrubber } from '../features/bike/CoilScrubber';
 import { benchWall, motion } from '../theme/tokens';
 import { isEnabled } from '../flags';
 import { DEFAULT_BUILD, choiceOf, type Build, type BuildKey } from '../features/bike/build';
@@ -20,6 +21,8 @@ import { BuildToggle, BuildTray } from '../features/bike/BuildTray';
 import { PartDrawer } from '../features/bike/PartDrawer';
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
+/** Portrait phones too short for the build tray and the drawer's tab together (iPhone 14 in Safari is 664 px). */
+const SHORT = '@media (max-height: 720px)';
 const PORTRAIT = '(max-width: 760px)';
 /** A phone turned sideways: short and wide. */
 const LANDSCAPE = '(max-height: 500px) and (orientation: landscape)';
@@ -105,6 +108,13 @@ export function ExploreBikePage() {
     });
   }, []);
 
+  // The coil's "try me" invitation lives here, not in the scrubber: the phone layouts mount the
+  // controls again when a phone turns, which must neither restart its 4 s beat nor bring it back
+  // once the rider has moved it.
+  const [inviteSince] = useState(() => performance.now());
+  const [scrubbed, setScrubbed] = useState(false);
+  const fromCoil = useCallback((p: number) => { setScrubbed(true); fromSlider(p); }, [fromSlider]);
+
   const coarse = useMediaQuery('(pointer: coarse)', { noSsr: true });
   const [cardHost, setCardHost] = useState<HTMLElement | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -187,7 +197,8 @@ export function ExploreBikePage() {
         // The drawer layout: the whole screen is the bench wall, so the stage is just the bike.
         // It keeps the bike's proportions and sits near the top, so the drawer opening below it
         // never moves the bike. Capped on wider screens so the drawer keeps room to open.
-        ...(drawer && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none' }),
+        // Short screens give a little more of the height to the drawer's space, for the build tray.
+        ...(drawer && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none', [SHORT]: { maxHeight: '38svh' } }),
         '& .bx-card:not(:empty)': { animation: `bf-rise .5s ${motion.rise}` },
         '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
       }}
@@ -220,7 +231,9 @@ export function ExploreBikePage() {
       >
         <Icon name={apart ? 'collapse' : 'expand'} />
       </Button>
-      <ExplodeScrubber progress={progress} onChange={fromSlider} />
+      {isEnabled('bikeCoil')
+        ? <CoilScrubber progress={progress} onChange={fromCoil} since={inviteSince} moved={scrubbed} />
+        : <ExplodeScrubber progress={progress} onChange={fromSlider} />}
     </Box>
   );
 
@@ -238,7 +251,7 @@ export function ExploreBikePage() {
     </Box>
   );
 
-  const tray = buildOn && <BuildTray build={build} onChange={change} open={open} id={trayId} stacked={compact} inline={portrait} />;
+  const tray = buildOn && <BuildTray build={build} onChange={change} open={open} id={trayId} stacked={compact} inline={portrait} fit={drawer} />;
 
   // Phones: the panel holds the build tray, then the docked info card, or (with nothing
   // selected) the hint and, in portrait on a touch screen, the invitation to turn the phone.
@@ -270,13 +283,13 @@ export function ExploreBikePage() {
     <Box
       data-testid="dock"
       sx={{
-        // Stays at the bottom of the screen: the build tray (when open) above the controls.
+        // Stays at the bottom of the screen, always the same height: the build tray opens in
+        // the drawer's space above it, so it can never push the bike or the drawer's tab.
         background: 'var(--bg)', borderTop: '1px solid var(--rule)',
         p: '0 var(--gutter) calc(12px + env(safe-area-inset-bottom))',
         '& > :last-child': { mt: '12px' },
       }}
     >
-      {tray}
       {controls}
     </Box>
   );
@@ -328,8 +341,14 @@ export function ExploreBikePage() {
               {/* The bench wall: from under the title to the dock. */}
               <Box sx={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', minHeight: 0, background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}>
                 {stage}
-                <Box data-testid="drawer-space" sx={{ display: 'grid', alignContent: 'end', minHeight: 0, pt: '12px', '& > *': { minHeight: 0 } }}>
-                  <PartDrawer partKey={selected} build={buildOn ? build : undefined} open={drawerOpen} onOpenChange={openDrawer} hostRef={setCardHost} />
+                {/* Between the bike and the dock: the build tray (scrolling inside if it can't fit),
+                    then the drawer. They never open together, and the drawer's tab always shows. */}
+                <Box data-testid="drawer-space" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: open ? '8px' : 0, minHeight: 0, pt: '12px', '& > *': { minHeight: 0 } }}>
+                  {tray && <Box sx={{ flex: '0 1 auto', display: 'flex', flexDirection: 'column', px: 'var(--gutter)', ...(open && { [SHORT]: { pb: '12px' } }) }}>{tray}</Box>}
+                  {/* On short screens the open tray takes the drawer's tab's room too; the tab returns when it closes. */}
+                  <Box data-testid="drawer-slot" sx={{ flex: drawerOpen ? '0 1 auto' : 'none', display: 'grid', ...(open && { [SHORT]: { display: 'none' } }) }}>
+                    <PartDrawer partKey={selected} build={buildOn ? build : undefined} open={drawerOpen} onOpenChange={openDrawer} hostRef={setCardHost} />
+                  </Box>
                 </Box>
               </Box>
               {dock}
