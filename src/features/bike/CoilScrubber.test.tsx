@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProviders } from '../../AppProviders';
@@ -21,10 +21,19 @@ function maxTug(ms: number) {
   return most;
 }
 
+/** Owns the invitation's beat and the moved state, as ExploreBikePage does. */
+function Host({ progress, onChange, since, moved: movedAlready = false }: {
+  progress: number; onChange: (p: number) => void; since?: number; moved?: boolean;
+}) {
+  const [from] = useState(() => since ?? performance.now());
+  const [moved, setMoved] = useState(movedAlready);
+  return <CoilScrubber progress={progress} since={from} moved={moved} onChange={(p) => { setMoved(true); onChange(p); }} />;
+}
+
 function mount(progress = 0, props: { since?: number; moved?: boolean } = {}) {
   const onChange = vi.fn();
   // StrictMode, as in the app: it unmounts and remounts effects, which once stalled the frame loop.
-  const ui = (p: typeof props) => <StrictMode><AppProviders><CoilScrubber progress={progress} onChange={onChange} {...p} /></AppProviders></StrictMode>;
+  const ui = (p: typeof props) => <StrictMode><AppProviders><Host progress={progress} onChange={onChange} {...p} /></AppProviders></StrictMode>;
   const r = render(ui(props));
   return Object.assign(onChange, { rerender: (p: typeof props) => r.rerender(ui(p)), unmount: r.unmount });
 }

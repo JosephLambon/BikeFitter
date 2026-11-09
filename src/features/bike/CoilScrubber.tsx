@@ -4,7 +4,7 @@
    stops. Until someone first moves it, the grip gives a small tug every few seconds to say
    "try me". Only a real change counts: on a phone, a thumb that lands on the dock to scroll
    or swipe fires pointerdown without meaning to touch the scrubber. The tugs keep one beat
-   from `since`, and `moved` can come from the page, so the phone layouts, which mount the
+   from `since`, and the page keeps `moved`, so the phone layouts, which mount the
    scrubber again when a phone turns, neither restart the rhythm nor bring a stopped
    invitation back. The MUI Slider underneath does the input and accessibility; its thumb is
    the grip. The drawing is written straight to the DOM each frame, so React never re-renders
@@ -19,25 +19,23 @@ import { SCRUBBER_H } from './ExplodeScrubber';
 
 const H = SCRUBBER_H;
 
-/** `since` (ms, performance clock): when the invitation began; defaults to when this mounted.
-    `moved`: whether the scrubber has been moved, when the page keeps track; otherwise it does. */
+/** `since` (ms, performance clock): when the invitation began. `moved`: whether the scrubber
+    has been moved. The page owns both, so they outlive the remount when a phone turns; it
+    should set `moved` on the first `onChange`. */
 export function CoilScrubber({ progress, onChange, since, moved }: {
-  progress: number; onChange: (p: number) => void; since?: number; moved?: boolean;
+  progress: number; onChange: (p: number) => void; since: number; moved: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const parts = useRef<Record<string, SVGElement | null>>({});
   const [width, setWidth] = useState(400);
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
   const touchScreen = useMediaQuery('(pointer: coarse)', { noSsr: true });
-  const [touchedHere, setTouched] = useState(false);
-  const touched = moved ?? touchedHere;
-  const inviting = !touched && !reduce;
-  const [mountedAt] = useState(() => performance.now());
-  const beatFrom = since ?? mountedAt;
+  const inviting = !moved && !reduce;
 
   const motion = useRef(new CoilMotion());
+  // What the frame loop and the invitation's timer read; written only once React commits.
   const now = useRef({ progress, width, reduce });
-  now.current = { progress, width, reduce };
+  useLayoutEffect(() => { now.current = { progress, width, reduce }; }, [progress, width, reduce]);
 
   const draw = useCallback(() => {
     const { progress: p, width: w, reduce: r } = now.current, m = motion.current;
@@ -89,7 +87,7 @@ export function CoilScrubber({ progress, onChange, since, moved }: {
     if (!inviting) return;
     let timer = 0;
     const plan = (after: number) => {
-      const due = nextTug(after, beatFrom);
+      const due = nextTug(after, since);
       timer = window.setTimeout(() => {
         motion.current.kick(now.current.progress > 0.5 ? -1 : 1, touchScreen ? INVITE.touchPull : INVITE.pull);
         wake();
@@ -98,9 +96,8 @@ export function CoilScrubber({ progress, onChange, since, moved }: {
     };
     plan(performance.now());
     return () => clearTimeout(timer);
-  }, [inviting, touchScreen, wake, beatFrom]);
+  }, [inviting, touchScreen, wake, since]);
 
-  const touch = () => { if (!touched) setTouched(true); };
   const ref = (k: string) => (n: SVGElement | null) => { parts.current[k] = n; };
 
   return (
@@ -122,7 +119,7 @@ export function CoilScrubber({ progress, onChange, since, moved }: {
       <Slider
         value={Math.round(progress * 100)}
         min={0} max={100}
-        onChange={(_e, v) => { touch(); onChange((v as number) / 100); }}
+        onChange={(_e, v) => onChange((v as number) / 100)}
         getAriaValueText={() => sliderText(progress)}
         slotProps={{ input: { 'aria-label': 'How far apart the bike is' } }}
         sx={{

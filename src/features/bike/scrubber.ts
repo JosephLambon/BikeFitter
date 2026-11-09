@@ -113,9 +113,13 @@ export class CoilMotion {
     if (dt <= 0) return this.hold > 0 || this.tug.x !== 0 || this.tug.v !== 0 || this.wave.x !== 0 || this.wave.v !== 0;
     const moved = this.last === null ? 0 : progress - this.last;
     this.last = progress;
-    this.hold = Math.max(0, this.hold - dt);
     const tugV = this.tug.v;
-    const pulling = spring(this.tug, this.hold > 0 ? this.dir * this.pull : 0, 260, 14, dt, 0.05); // settles well inside a second
+    // Pull for the part of this frame the hold still covers, then let go for the rest, so a
+    // slow frame (a busy phone) still plays the tug instead of spending the hold standing still.
+    const held = Math.min(this.hold, dt);
+    this.hold -= held;
+    if (held > 0) spring(this.tug, this.dir * this.pull, 260, 14, held, 0.05);
+    const pulling = spring(this.tug, this.hold > 0 ? this.dir * this.pull : 0, 260, 14, dt - held, 0.05); // settles well inside a second
     const v = moved / dt + tugV / Math.max(1, spanPx); // grip speed, in spans per second
     const target = Math.max(-COIL.maxWave, Math.min(COIL.maxWave, -v * 0.035));
     const waving = spring(this.wave, target + 0, 260, 13, dt, 1e-3);

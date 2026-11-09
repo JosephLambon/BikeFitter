@@ -90,6 +90,15 @@ describe('CoilMotion', () => {
     expect(Math.max(...run(m, 1).map((f) => f.tug))).toBeGreaterThan(INVITE.pull * 0.6);
   });
 
+  it.each([0.14, 0.2, 0.25])('still plays a tug whose first frame is slow (%s s, longer than the hold)', (dt) => {
+    // A busy phone: the frame after the tug's timer arrives late. The pull must happen within
+    // that frame, not be spent waiting out the hold, or the loop stops and the beat is lost.
+    const m = new CoilMotion();
+    m.kick(1);
+    expect(m.step(dt, 0.3, 300)).toBe(true);
+    expect(Math.abs(m.tug.x)).toBeGreaterThan(0.5);
+  });
+
   it.each([1, -1])('a tug pulls out slightly in direction %s, springs back past rest, then settles', (dir) => {
     const m = new CoilMotion();
     m.kick(dir);
