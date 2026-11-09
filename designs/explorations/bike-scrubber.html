@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en-GB" data-style="workstand" data-font="1" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explode scrubber · design concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=JetBrains+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="../site/styles/base.css">
+<link rel="stylesheet" href="../site/styles/workstand.css">
+<link rel="stylesheet" href="../shared/bike.css">
+<style>
+  /* ---------- Review page chrome (not part of the site) ---------- */
+  :root { --bench-wall: #ffffff; --bench-dot: #ecc89a; --bench-line: #e6e6e1;
+          --m-alloy: #e2e5e7; --m-alloy-hi: #c3c8cc; --m-tyre: #dcc29d; --m-tyre-hi: #b48d5a; --m-leather: #b98a55; }
+  :root[data-theme="dark"] { --bench-wall: #2d2012; --bench-dot: #5a3e1d; --bench-line: transparent;
+          --m-alloy: #3b3e41; --m-alloy-hi: #4c5054; --m-tyre: #8c7050; --m-tyre-hi: #a98a62; --m-leather: #86613a; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-text); }
+  .ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .mono { font-family: var(--f-mono); font-size: 12px; color: var(--ink-3); }
+
+  .rv { max-width: 1480px; margin: 0 auto; padding: 56px 24px 120px; }
+  .rv-head { max-width: 780px; margin-bottom: 40px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--bike-tint); color: var(--bike); }
+  .rv-head h1 { font-size: clamp(36px, 4.4vw, 52px); line-height: 1.06; margin: 14px 0 16px; letter-spacing: -.03em; font-weight: 650; }
+  .rv-head p { color: var(--ink-2); font-size: 19px; margin: 0 0 12px; }
+  .rv-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 24px; }
+  .rv-tools .seg { width: 280px; }
+
+  .rv-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 560px); gap: 40px; align-items: start; }
+  .rv-list { display: grid; gap: 20px; }
+  .rv-stage { position: sticky; top: 24px; }
+  .stage-win { background: var(--bg); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .stage-bar { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-bottom: 1px solid var(--rule); font-size: 13px; font-weight: 600; }
+  .stage-bar .ico { color: var(--bike); }
+  .stage-bar .mono { margin-left: auto; }
+  .bench { background: radial-gradient(circle at 2.1px 2.1px, var(--bench-dot) 1.4px, transparent 1.7px) 0 0 / 22px 22px, var(--bench-wall); }
+  .stage { aspect-ratio: 4 / 3; padding: 12px 16px; display: flex; align-items: center; overflow: hidden; min-width: 0; }
+  .stage #bike { width: 100%; min-width: 0; }
+  .stage .bx { --bx-hole: var(--bench-wall); width: 100%; }
+  .stage-note { font-size: 13px; color: var(--ink-3); margin: 12px 2px 0; }
+
+  @media (max-width: 980px) {
+    .rv-body { grid-template-columns: 1fr; }
+    .rv-stage { order: -1; top: 0; z-index: 5; background: var(--bg); padding-bottom: 12px; }
+    .stage { aspect-ratio: 16 / 9; }
+    .stage-note { display: none; }
+  }
+  @media (max-width: 760px) { .rv { padding: 32px 16px 96px; } }
+
+  /* Concept card */
+  .cx { border: 1px solid var(--rule); border-radius: 14px; padding: 24px 24px 20px; }
+  .cx.is-owner { border-color: color-mix(in srgb, var(--bike) 45%, var(--rule)); }
+  .cx-head { display: flex; align-items: center; gap: 10px; }
+  .cx-n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--bike-tint); color: var(--bike); font-size: 14px; font-weight: 650; flex: none; }
+  .cx h2 { font-size: 21px; margin: 0; letter-spacing: -.02em; font-weight: 650; }
+  .cx-kind { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+  .cx-head .mono { margin-left: auto; min-width: 4ch; text-align: right; }
+  .cx-idea { color: var(--ink-2); font-size: 15px; margin: 8px 0 18px; max-width: 64ch; }
+  .cx-tech { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; padding: 0; list-style: none; }
+  .cx-tech li { font-size: 12px; font-family: var(--f-mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 8px; }
+
+  /* The dock row, as in the real app: explode button + scrubber */
+  .dockrow { display: flex; align-items: center; gap: 10px; width: var(--dock-w, 560px); max-width: 100%; }
+  .dockrow .btn { display: inline-flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; border: 0; cursor: pointer; font: 600 15px var(--f-text); white-space: nowrap; flex: none; }
+  .dockrow .btn .lbl-s { display: none; }
+  :root[data-w="phone"] .dockrow .btn { width: 56px; padding: 0; justify-content: center; }
+  :root[data-w="phone"] .dockrow .btn .lbl { display: none; }
+
+  /* Every scrubber is a slider widget on the same well */
+  .trk { position: relative; flex: 1 1 auto; min-width: 0; height: 56px; border-radius: 14px; background: var(--surface-2); overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+  .trk.is-drag { cursor: grabbing; }
+  .trk:focus-visible { outline: 2px solid var(--bike); outline-offset: 2px; }
+  .trk > svg, .trk > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  .trk--clear { background: transparent; overflow: visible; }
+
+</style>
+</head>
+<body data-page="bike">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14.5 4H20v5.5M20 4l-6 6M9.5 20H4v-5.5M4 20l6-6"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 4l-6 6M14 4.5V10h5.5M4 20l6-6M10 19.5V14H4.5"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="16" r="3.5"/><circle cx="18.5" cy="16" r="3.5"/><path d="M5.5 16 9 9h6l3.5 7M9 9l3 7h-1M12 6h3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+</svg>
+
+<main class="rv">
+  <header class="rv-head">
+    <span class="chip"><svg class="ico" style="width:16px;height:16px"><use href="#i-bike"/></svg>Explore the bike · design review</span>
+    <h1>Twelve workshop toys that take the bike apart.</h1>
+    <p>Round 2. Your four picks from round 1 come first, then eight new ones in the same spirit: real workshop things, drawn in the bike's own style, with physics you want to play with. Drag one, flick it, or tab to it and use the arrow keys. The bike follows whichever one you last touched.</p>
+    <p>Leave them alone for a while and, every so often, one gives a small tug, as if to say "try me". Only one control moves at a time, never one you've just used, never while you're using the page, and never if you've asked for reduced motion.</p>
+    <p hidden>Every one runs on one shared spring engine with fixed time steps, at 60 fps or better, on transforms and plain SVG or canvas. Animation sleeps when nothing moves and when a control is off screen.</p>
+    <div class="rv-tools">
+      <div class="seg" role="radiogroup" aria-label="Track width">
+        <label><input type="radio" name="w" value="desktop" checked>Desktop</label>
+        <label><input type="radio" name="w" value="phone">Phone</label>
+      </div>
+      <button class="btn btn--quiet" id="all" type="button" style="display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:600 15px var(--f-text)"><svg class="ico"><use href="#i-expand"/></svg><span>Take them all apart</span></button>
+      <button class="btn btn--quiet" id="theme" type="button" style="display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:600 15px var(--f-text)"><svg class="ico"><use href="#i-sun"/></svg>Light or dark</button>
+    </div>
+  </header>
+
+  <div class="rv-body">
+    <div class="rv-list" id="list"></div>
+    <aside class="rv-stage">
+      <div class="stage-win">
+        <div class="stage-bar"><svg class="ico"><use href="#i-bike"/></svg><span id="owner">Explore the bike</span><span class="mono" id="pc">0%</span></div>
+        <div class="stage bench"><div id="bike"></div></div>
+      </div>
+      <p class="stage-note">The real drawing, driven live. Pick favourites by number; mixes are welcome (for example 1's spring with 8's elastic overdrag).</p>
+    </aside>
+  </div>
+</main>
+
+<script src="../shared/bike.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  var NS = 'http://www.w3.org/2000/svg';
+  var H = 56, CY = 28, PAD = 14, MIN = 44;
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  function clamp(v, a, b) { return Math.max(a == null ? 0 : a, Math.min(b == null ? 1 : b, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function r1(v) { return Math.round(v * 10) / 10; }
+  function el(tag, attrs, parent) { var n = document.createElementNS(NS, tag); for (var k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.appendChild(n); return n; }
+  function easeIO(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  /* Apple's rubber band: resistance grows the further you pull past the end. */
+  function band(o, dim) { var c = 0.55; var s = o < 0 ? -1 : 1; o = Math.abs(o); return s * (1 - 1 / (o * c / dim + 1)) * dim; }
+  function css(name, from) { return getComputedStyle(from || document.body).getPropertyValue(name).trim(); }
+  function buzz() { try { if (navigator.vibrate) navigator.vibrate(4); } catch (e) {} }
+
+  /* ---------------- The real bike ---------------- */
+  var bike = BikeExplorer.mount(document.getElementById('bike'), { interactive: false, progress: 0 });
+  var pcEl = document.getElementById('pc'), ownerEl = document.getElementById('owner');
+  var bikeSpring = { x: 0, v: 0 }, bikeTarget = 0, bikeDirect = true;
+  function showBike(p) { bike.setProgress(clamp(p)); pcEl.textContent = Math.round(clamp(p) * 100) + '%'; }
+
+  /* ---------------- Shared spring engine ---------------- */
+  /* Semi-implicit Euler at a fixed 240 Hz step: frame-rate independent and stable. */
+  var STEP = 1 / 240;
+  function springStep(s, target, k, c, dt) { var a = -k * (s.x - target) - c * s.v; s.v += a * dt; s.x += s.v * dt; }
+  function settled(s, target) { return Math.abs(s.x - target) < 2e-4 && Math.abs(s.v) < 2e-3; }
+
+  var ctls = [], owner = null, running = false, last = 0, lastUser = -1e9;
+  function wake() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
+  function frame(now) {
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    var busy = false;
+    ctls.forEach(function (c) { if (c.tick(dt)) busy = true; });
+    if (owner) { showBike(owner.value()); }
+    else {
+      if (reduced.matches) bikeSpring.x = bikeTarget, bikeSpring.v = 0;
+      for (var t = 0; t < dt; t += STEP) springStep(bikeSpring, bikeTarget, 120, 22, STEP);
+      if (!settled(bikeSpring, bikeTarget)) busy = true; else bikeSpring.x = bikeTarget;
+      showBike(bikeSpring.x);
+    }
+    if (busy) requestAnimationFrame(frame); else running = false;
+  }
+
+  /* A controller wraps one concept: input, spring, keyboard, ARIA, visibility. */
+  function Ctl(def, n) {
+    var self = this; this.def = def;
+    var card = document.createElement('article'); card.className = 'cx';
+    card.innerHTML = '<div class="cx-head"><span class="cx-n">' + n + '</span><h2>' + def.name + '</h2><span class="cx-kind">' + def.kind + '</span><span class="mono">0%</span></div>' +
+      '<p class="cx-idea">' + def.idea + '</p>' +
+      '<div class="dockrow"><button class="btn btn--quiet" type="button"><svg class="ico"><use href="#i-expand"/></svg><span class="lbl">Take it apart</span></button>' +
+      '<div class="trk' + (def.clear ? ' trk--clear' : '') + '" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="How far apart the bike is (' + def.name + ')"></div></div>' +
+      '<ul class="cx-tech">' + def.tech.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+    document.getElementById('list').appendChild(card);
+    this.card = card; this.trk = card.querySelector('.trk'); this.btn = card.querySelector('.btn'); this.val = card.querySelector('.cx-head .mono');
+    this.s = { x: 0, v: 0 }; this.target = 0; this.teaseOff = 0; this.teasing = false; this.lastTouch = -1e9; this.lastTease = -1e9; this.drag = false; this.visible = true; this.dirty = true;
+    this.k = def.k || 220; this.c = def.c || 30; // release spring
+    this.W = this.trk.clientWidth || 400;
+    this.view = def.build(this.trk, this);
+    var ro = new ResizeObserver(function () { var w = self.trk.clientWidth; if (w && w !== self.W) { self.W = w; if (self.view.resize) self.view.resize(w); self.dirty = true; wake(); } });
+    ro.observe(this.trk);
+    new IntersectionObserver(function (es) { self.visible = es[0].isIntersecting; if (self.visible) { self.dirty = true; wake(); } }).observe(this.trk);
+    if (this.view.resize) this.view.resize(this.W);
+    this.bindPointer(); this.bindKeys();
+    this.btn.addEventListener('click', function () { self.own(); self.seek(self.target > 0.5 ? 0 : 1); });
+  }
+  Ctl.prototype.geom = function () { return this.def.geom ? this.def.geom(this.W) : { a: PAD + MIN, b: this.W - PAD }; };
+  Ctl.prototype.value = function () { return this.def.output ? this.def.output(this) : this.s.x; };
+  Ctl.prototype.touch = function () { this.lastTouch = lastUser = performance.now(); this.teaseOff = 0; this.teasing = false; };
+  Ctl.prototype.own = function () {
+  this.touch();
+    if (owner === this) return;
+    if (owner) owner.card.classList.remove('is-owner');
+    owner = this; this.card.classList.add('is-owner'); ownerEl.textContent = this.def.name;
+  };
+  /* "Try me": a small tug-tug away from rest, then the concept's own physics brings it home. */
+  Ctl.prototype.tease = function () {
+    var self = this, dir = this.target > 0.5 ? -1 : 1, amp = (this.def.teaseAmt || 0.1) * dir, seq = [[0, amp], [230, 0], [520, amp * 0.55], [700, 0]];
+    this.teasing = true; this.lastTease = performance.now();
+    seq.forEach(function (st) { setTimeout(function () { if (!self.teasing) return; self.teaseOff = st[1]; self.dirty = true; wake(); }, st[0]); });
+    setTimeout(function () { self.teasing = false; }, 2400);
+  };
+  Ctl.prototype.seek = function (p) { this.target = this.def.snap ? this.def.snap(p) : clamp(p); this.dirty = true; wake(); };
+  Ctl.prototype.tick = function (dt) {
+    var busy = false, s = this.s;
+    // Followers ease towards the owner's value, so every control stays in step with the bike.
+    if (owner && owner !== this && !this.drag) this.target = clamp(owner.value());
+    if (!this.drag) {
+      var goal = this.target + this.teaseOff;
+      if (reduced.matches) { s.x = goal; s.v = 0; }
+      else { for (var t = 0; t < dt; t += STEP) springStep(s, goal, this.k, this.c, STEP); }
+      if (settled(s, goal)) { s.x = goal; s.v = 0; } else busy = true;
+    }
+    if (this.view.step && this.visible) { if (this.view.step(dt, this)) busy = true; }
+    if (this.drag) busy = true;
+    if (this.visible && (busy || this.dirty)) { this.view.render(s.x, s.v, this); this.dirty = false; }
+    var pv = Math.round(clamp(this.value()) * 100);
+    if (pv !== this._pv && !this.teasing) { this._pv = pv; this.val.textContent = pv + '%'; this.trk.setAttribute('aria-valuenow', pv); this.trk.setAttribute('aria-valuetext', pv === 0 ? 'Together' : pv === 100 ? 'Fully apart' : pv + '% apart'); this.btn.lastChild.textContent = pv > 50 ? 'Put it together' : 'Take it apart'; this.btn.querySelector('use').setAttribute('href', pv > 50 ? '#i-collapse' : '#i-expand'); }
+    return busy;
+  };
+  Ctl.prototype.bindPointer = function () {
+    var self = this, trk = this.trk, samples = [], offset = 0, startX = 0, startV = 0;
+    function toP(clientX) { var r = trk.getBoundingClientRect(), g = self.geom(); return (clientX - r.left - g.a) / (g.b - g.a); }
+    function banded(p) { var g = self.geom(), span = g.b - g.a; if (p > 1) return 1 + band((p - 1) * span, self.W * 0.3) / span; if (p < 0) return band(p * span, self.W * 0.3) / span; return p; }
+    trk.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      trk.setPointerCapture(e.pointerId); trk.classList.add('is-drag'); trk.focus({ preventScroll: true });
+      self.own(); self.touch(); samples = [];
+      var p = toP(e.clientX), span = self.geom().b - self.geom().a;
+      if (self.def.relative) { startX = e.clientX; startV = self.s.x; self.drag = true; self.s.v = 0; }
+      else if (Math.abs(p - self.s.x) * span < 30) { offset = self.s.x - p; self.drag = true; self.s.v = 0; }
+      else { offset = 0; self.drag = false; self.seek(p); self.pendingDrag = true; }
+      if (self.view.press) self.view.press(true, self);
+      wake();
+    });
+    trk.addEventListener('pointermove', function (e) {
+      if (!trk.hasPointerCapture(e.pointerId)) { if (self.view.hover) { var r = trk.getBoundingClientRect(); self.view.hover(e.clientX - r.left, self); self.dirty = true; wake(); } return; }
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
+      var ev = evs[evs.length - 1];
+      var p;
+      if (self.def.relative) p = startV + (ev.clientX - startX) / self.def.relative(self.W);
+      else p = toP(ev.clientX) + offset;
+      if (self.pendingDrag) { self.pendingDrag = false; self.drag = true; offset = self.s.x - toP(ev.clientX); p = self.s.x; }
+      if (!self.drag) return;
+      p = banded(p);
+      var now = performance.now(); samples.push([now, p]); while (samples.length > 2 && now - samples[0][0] > 90) samples.shift();
+      var v = samples.length > 1 ? (p - samples[0][1]) / Math.max(0.008, (now - samples[0][0]) / 1000) : 0;
+      if (self.def.magnet) p = self.def.magnet(p, self);
+      self.s.v = lerp(self.s.v, v, 0.5); self.s.x = p; self.target = p; self.dirty = true;
+      if (self.view.hover) { var r2 = trk.getBoundingClientRect(); self.view.hover(ev.clientX - r2.left, self); }
+      wake();
+    });
+    function up(e) {
+      if (!trk.hasPointerCapture(e.pointerId) && !self.drag && !self.pendingDrag) return;
+      trk.classList.remove('is-drag'); self.pendingDrag = false;
+      if (self.drag) {
+        self.drag = false;
+        var p = self.s.x;
+        if (self.def.momentum) p = p + self.s.v * self.def.momentum; // project the flick, then spring there
+        self.seek(p);
+      }
+      if (self.view.press) self.view.press(false, self);
+      wake();
+    }
+    trk.addEventListener('pointerup', up); trk.addEventListener('pointercancel', up);
+    trk.addEventListener('pointerleave', function () { if (self.view.hover && !self.drag) { self.view.hover(null, self); self.dirty = true; wake(); } });
+    trk.addEventListener('lostpointercapture', up);
+  };
+  Ctl.prototype.bindKeys = function () {
+    var self = this;
+    this.trk.addEventListener('keydown', function (e) {
+      var step = self.def.keyStep || 0.05, p = self.target, map = { ArrowRight: step, ArrowUp: step, ArrowLeft: -step, ArrowDown: -step, PageUp: .25, PageDown: -.25 };
+      if (e.key in map) p += map[e.key]; else if (e.key === 'Home') p = 0; else if (e.key === 'End') p = 1; else return;
+      e.preventDefault(); self.own(); self.touch(); self.seek(p);
+    });
+  };
+
+  /* ---------------- The twelve concepts ---------------- */
+  var C = [];
+  function tonePath(parent, extra) { return el('path', Object.assign({ fill: 'none', stroke: 'var(--bike)', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, extra || {}), parent); }
+  function svgIn(trk) { return el('svg', { 'aria-hidden': 'true' }, trk); }
+  function span(p, W) { var full = W - PAD * 2; return { x0: PAD, x1: PAD + MIN + p * (full - MIN) }; }
+
+  /* 1 · Coil spring */
+  C.push({ name: 'Coil spring', kind: 'Round 1 pick',
+    idea: 'A steel coil that stretches as the bike comes apart. The coils behind are drawn lighter than the coils in front, so it reads in 3D. The middle coils lag the grip, so a flick sends a soft wave along the spring, and letting go makes it settle with a gentle wobble.',
+    tech: ['Projected helix', 'Front/back depth split', 'Velocity wave', 'Under-damped spring', 'Rubber-band overdrag'],
+    k: 260, c: 13,
+    build: function (trk) {
+      var s = svgIn(trk);
+      var fill = el('rect', { y: 0, height: H, fill: 'var(--bike-tint)' }, s);
+      var back = tonePath(s, { stroke: 'var(--ink-3)', 'stroke-width': 1.75, opacity: .45 });
+      var front = tonePath(s, { 'stroke-width': 2.6 });
+      var shine = tonePath(s, { stroke: 'var(--bg)', 'stroke-width': .9, opacity: .7 });
+      var cap0 = el('rect', { x: PAD - 3, y: CY - 12, width: 4, height: 24, rx: 2, fill: 'var(--ink-2)' }, s);
+      var grip = el('rect', { y: CY - 14, width: 5, height: 28, rx: 2.5, fill: 'var(--bike)' }, s);
+      var N = 13, R = 12, TILT = 1.4, STEPS = N * 24;
+      return { render: function (p, v, c) {
+        var sp = span(p, c.W), x0 = sp.x0 + 4, x1 = sp.x1 - 3, L = x1 - x0, T = N * Math.PI * 2;
+        var wave = clamp(-v * 0.035, -0.12, 0.12); // middle coils lag behind a moving grip
+        var db = '', df = '', dh = '', prevFront = null;
+        for (var i = 0; i <= STEPS; i++) {
+          var t = (i / STEPS) * T, f = i / STEPS;
+          var ff = f + wave * Math.sin(Math.PI * f);
+          var env = Math.min(1, Math.min(f, 1 - f) * N * 1.5); // taper into the end caps
+          var x = x0 + L * ff + TILT * Math.sin(t) * env, y = CY - R * Math.cos(t) * env;
+          var isFront = Math.sin(t) >= 0;
+          var seg = (prevFront === isFront ? 'L' : 'M') + r1(x) + ' ' + r1(y);
+          if (prevFront !== null && prevFront !== isFront) { // close previous half-turn at this point so halves meet
+            if (prevFront) df += 'L' + r1(x) + ' ' + r1(y); else db += 'L' + r1(x) + ' ' + r1(y);
+          }
+          if (isFront) { df += seg; if (Math.cos(t) > 0.15) dh += (dh && prevFront && Math.cos(t - T / STEPS) > 0.15 ? 'L' : 'M') + r1(x - 0.6) + ' ' + r1(y - 0.9); }
+          else db += seg;
+          prevFront = isFront;
+        }
+        back.setAttribute('d', db); front.setAttribute('d', df); shine.setAttribute('d', dh);
+        fill.setAttribute('width', Math.max(0, sp.x1 + 10)); grip.setAttribute('x', sp.x1 - 2.5);
+      } };
+    } });
+
+
+  /* 5 · Fitter's tape */
+  C.push({ name: 'Fitter\'s tape', kind: 'Round 1 pick',
+    idea: 'A tape measure, the one tool every fitter carries. The hook is the grip. The scale starts at the hook and counts back towards the case, like a real tape, so new numbers appear from the case as you pull. The reel inside the case turns with the tape.',
+    tech: ['One translated group', 'clipPath reveal', 'Reel rotation = length ÷ radius', 'Hook tilts with velocity'],
+    k: 260, c: 24,
+    geom: function (W) { return { a: 66, b: W - PAD - 8 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), id = 'tp' + Math.random().toString(36).slice(2, 7), CASE = 44, X0 = PAD + CASE;
+      var clip = el('clipPath', { id: id }, el('defs', {}, s)); var cr = el('rect', { x: X0 - 2, y: 0, height: H }, clip);
+      var tapeG = el('g', { 'clip-path': 'url(#' + id + ')' }, s), tape = el('g', {}, tapeG);
+      function build(W) {
+        tape.innerHTML = ''; var full = W;
+        el('rect', { x: -full, y: CY - 10, width: full, height: 20, rx: 3, fill: 'var(--bike-tint)', stroke: 'var(--bike)', 'stroke-width': 1 }, tape);
+        var d = '';
+        for (var u = 0; u * 4 < full; u++) { var x = -u * 4, h = u % 10 === 0 ? 9 : u % 5 === 0 ? 6 : 3.5; d += 'M' + x + ' ' + (CY - 10) + 'v' + h; }
+        el('path', { d: d, stroke: 'var(--bike)', 'stroke-width': 1, fill: 'none' }, tape);
+        for (var m = 1; m * 40 < full; m++) { var t = el('text', { x: -m * 40 + 2, y: CY + 7, 'font-family': 'JetBrains Mono, monospace', 'font-size': 8.5, 'font-weight': 600, fill: 'var(--bike)' }, tape); t.textContent = m * 10; }
+      }
+      var hook = el('g', {}, s);
+      el('path', { d: 'M-1 -10 H3 V-15 a1.5 1.5 0 0 1 3 0 V15 a1.5 1.5 0 0 1 -3 0 V10 H-1 Z', fill: 'var(--bike)' }, hook);
+      var cs = el('g', {}, s);
+      el('rect', { x: PAD - 2, y: CY - CASE / 2, width: CASE, height: CASE, rx: 10, fill: 'var(--bg)', stroke: 'var(--rule)', 'stroke-width': 1 }, cs);
+      var reel = el('g', { transform: 'translate(' + (PAD - 2 + CASE / 2) + ' ' + CY + ')' }, cs);
+      el('circle', { r: 11, fill: 'var(--surface)', stroke: 'var(--ink-3)', 'stroke-width': 1 }, reel);
+      el('circle', { r: 2.5, fill: 'var(--ink-3)' }, reel);
+      el('path', { d: 'M0 -11v4', stroke: 'var(--ink-3)', 'stroke-width': 1.75, 'stroke-linecap': 'round' }, reel);
+      var slot = el('rect', { x: PAD - 2 + CASE - 2, y: CY - 11, width: 3, height: 22, rx: 1.5, fill: 'var(--ink-2)' }, s);
+      return { resize: build, render: function (p, v, c) {
+        var g = c.geom(), x = g.a + (g.b - g.a) * p;
+        cr.setAttribute('width', Math.max(0, x - X0 + 2));
+        tape.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+        hook.setAttribute('transform', 'translate(' + r1(x) + ' ' + CY + ') rotate(' + r1(clamp(-v * 3, -10, 10)) + ')');
+        reel.setAttribute('transform', 'translate(' + (PAD - 2 + CASE / 2) + ' ' + CY + ') rotate(' + r1((x - g.a) / 9 * 57.3) + ')');
+      } };
+    } });
+
+
+  /* 11 · Bolt */
+  C.push({ name: 'Undo the bolt', kind: 'Round 1 pick',
+    idea: 'Taking the bike apart means undoing bolts, so the grip is a hex bolt head. Drag it and the bolt backs out of its nut. The flats of the head turn as it goes, and the thread slides out with it, one turn per thread pitch. Push past the end and the head stops against the rubber band.',
+    tech: ['Hex faces from cos projection', 'Thread moves with the bolt', 'clipPath shank reveal', 'One turn per pitch'],
+    k: 240, c: 26,
+    geom: function (W) { return { a: 62, b: W - PAD - 12 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), id = 'bt' + Math.random().toString(36).slice(2, 7), NX = PAD + 20, PITCH = 5;
+      var fill = el('rect', { y: 0, height: H, fill: 'var(--bike-tint)' }, s);
+      var clip = el('clipPath', { id: id }, el('defs', {}, s)); var cr = el('rect', { x: NX, y: 0, height: H }, clip);
+      var shankG = el('g', { 'clip-path': 'url(#' + id + ')' }, s), shank = el('g', {}, shankG);
+      function build(W) {
+        shank.innerHTML = '';
+        el('rect', { x: -W, y: CY - 6, width: W, height: 12, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, shank);
+        var d = ''; for (var x = 0; x > -W; x -= PITCH) d += 'M' + (x - 2) + ' ' + (CY - 6) + 'L' + (x + 0.5) + ' ' + (CY + 6);
+        el('path', { d: d, stroke: 'var(--ink)', 'stroke-width': 1, fill: 'none', opacity: .55 }, shank);
+      }
+      var nut = el('g', {}, s);
+      el('rect', { x: PAD, y: CY - 15, width: 20, height: 30, rx: 2, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, nut);
+      el('path', { d: 'M' + PAD + ' ' + (CY - 5) + 'h20M' + PAD + ' ' + (CY + 5) + 'h20', stroke: 'var(--ink)', 'stroke-width': 1, opacity: .4 }, nut);
+      var head = el('g', {}, s), faces = [];
+      el('rect', { x: 0, y: -2.5, width: 3, height: 5, fill: 'var(--m-alloy)' }, head); // washer face
+      for (var i = 0; i < 3; i++) faces.push(el('rect', { y: -15, height: 30, fill: 'var(--bike)', stroke: 'var(--bike)', 'stroke-width': 1 }, head));
+      var hl = el('rect', { y: -15, height: 30, width: 0, fill: 'var(--bg)', opacity: .28 }, head);
+      return { resize: build, render: function (p, v, c) {
+        var g = c.geom(), x = g.a + (g.b - g.a) * p, rot = (x - g.a) / PITCH * Math.PI * 2;
+        cr.setAttribute('width', Math.max(0, x - NX));
+        shank.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+        fill.setAttribute('width', Math.max(0, x + 22));
+        // A hex seen side-on: up to three faces, widths from cos of each face normal.
+        var Wd = 14, k = 0, xs = 3;
+        var vis = [];
+        for (var f = 0; f < 6; f++) { var a = rot + f * Math.PI / 3, cs = Math.cos(a); if (cs > 0) vis.push({ y0: Math.sin(a - Math.PI / 6), y1: Math.sin(a + Math.PI / 6), cs: cs }); }
+        vis.sort(function (A, B) { return A.y0 - B.y0; });
+        head.setAttribute('transform', 'translate(' + r1(x) + ' ' + CY + ')');
+        faces.forEach(function (fc, i) {
+          var q = vis[i]; if (!q) { fc.style.display = 'none'; return; }
+          var y0 = q.y0 * 15, y1 = q.y1 * 15; fc.style.display = '';
+          fc.setAttribute('x', xs); fc.setAttribute('width', Wd); fc.setAttribute('y', r1(Math.min(y0, y1))); fc.setAttribute('height', r1(Math.abs(y1 - y0)));
+          fc.setAttribute('fill', 'color-mix(in srgb, var(--bike) ' + Math.round(55 + 45 * q.cs) + '%, var(--bg))');
+        });
+        hl.setAttribute('x', xs + 2); hl.setAttribute('width', 2); hl.setAttribute('opacity', '.25');
+      } };
+    } });
+
+  /* 12 · Rolling wheel */
+  C.push({ name: 'Rolling wheel', kind: 'Round 1 pick',
+    idea: 'The grip is a little wheel with a tan-wall tyre, rolling along a hairline road and leaving a tread print behind it. It rolls without slipping, so it turns exactly as far as it travels. When the spring overshoots on release, the wheel rolls back a touch, just as a real one would.',
+    tech: ['Rotation = distance ÷ radius', 'Tread print as a dash pattern', 'Under-damped settle', 'Bike materials (tan wall, alloy)'],
+    k: 210, c: 16,
+    geom: function (W) { return { a: PAD + 18, b: W - PAD - 18 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), R = 17, GY = CY + R;
+      var road = el('path', { d: '', stroke: 'var(--rule)', 'stroke-width': 1 }, s);
+      var print = el('path', { d: '', stroke: 'var(--bike)', 'stroke-width': 2, 'stroke-dasharray': '3 3', 'stroke-linecap': 'round', fill: 'none', opacity: .55 }, s);
+      var wheel = el('g', {}, s);
+      el('circle', { r: R - 1, fill: 'var(--m-tyre)', stroke: 'var(--ink)', 'stroke-width': 1 }, wheel);
+      el('circle', { r: R - 4, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, wheel);
+      el('circle', { r: R - 6, fill: 'none', stroke: 'var(--m-alloy-hi)', 'stroke-width': 1.5 }, wheel);
+      var sp = el('g', {}, wheel), d = '';
+      for (var i = 0; i < 10; i++) { var a = i / 10 * Math.PI * 2; d += 'M0 0L' + r1(Math.cos(a) * (R - 7)) + ' ' + r1(Math.sin(a) * (R - 7)); }
+      el('path', { d: d, stroke: 'var(--ink-3)', 'stroke-width': .75 }, sp);
+      el('circle', { r: 3, fill: 'var(--bike)' }, wheel);
+      el('path', { d: 'M0 ' + (-(R - 4)) + 'v3', stroke: 'var(--bike)', 'stroke-width': 1.75, 'stroke-linecap': 'round' }, wheel); // valve
+      return {
+        resize: function (W) { road.setAttribute('d', 'M' + PAD + ' ' + (GY + .5) + 'H' + (W - PAD)); },
+        render: function (p, v, c) {
+          var g = c.geom(), x = g.a + (g.b - g.a) * p;
+          wheel.setAttribute('transform', 'translate(' + r1(x) + ' ' + (CY - 2) + ') rotate(' + r1((x - g.a) / R * 57.2958) + ')');
+          print.setAttribute('d', 'M' + PAD + ' ' + (GY - 2.5) + 'H' + r1(Math.max(PAD, x - R * .3)));
+        } };
+    } });
+
+
+  /* Shared helpers for secondary motion */
+  function tint(s) { return el('rect', { y: 0, height: H, fill: 'var(--bike-tint)' }, s); }
+  function gx(c, p) { var g = c.geom(); return g.a + (g.b - g.a) * p; }
+  /* Tracks the grip's acceleration in px/s², smoothed, for anything that swings or sloshes. */
+  function accel() { var px = null, pv = 0, a = 0; return function (x, dt) { if (px === null || dt <= 0) { px = x; return 0; } var v = (x - px) / dt; a = lerp(a, (v - pv) / dt, 0.35); pv = v; px = x; return a; }; }
+  function uid(p) { return p + Math.random().toString(36).slice(2, 7); }
+
+  /* Seatpost */
+  C.push({ name: 'Raise the seatpost', kind: 'New',
+    idea: 'The grip is the saddle. Drag it and the seatpost slides out of the seat tube, with its scale gliding past the clamp. The saddle nods as it moves and rocks back when it stops. Pull past the end and the post\'s minimum-insertion hatching starts to show, the one mark you must never pass.',
+    tech: ['Post moves as one group', 'Saddle nod spring driven by velocity', 'Overdrag shows the hatching', 'Honey leather and alloy'],
+    k: 230, c: 22,
+    geom: function (W) { return { a: PAD + 70 + 26, b: W - PAD - 14 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), E = PAD + 70, nod = { x: 0, v: 0 }, postLen = 0;
+      var fill = tint(s), post = el('g', {}, s);
+      function build(W) {
+        post.innerHTML = ''; var g = ctl.geom(); postLen = (g.b - E) + 30;
+        el('rect', { x: -postLen, y: CY - 7, width: postLen - 4, height: 14, rx: 2, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, post);
+        var d = ''; for (var x = -postLen + 3; x < -postLen + 26; x += 4) d += 'M' + x + ' ' + (CY + 6) + 'l4 -12';
+        el('path', { d: d, stroke: 'var(--ink)', 'stroke-width': 1, opacity: .7 }, post);
+        el('path', { d: 'M' + (-postLen + 27) + ' ' + (CY - 7) + 'v14', stroke: 'var(--ink)', 'stroke-width': 1 }, post);
+        var t = ''; for (var u = 0, xx = -postLen + 34; xx < -12; xx += 8, u++) t += 'M' + xx + ' ' + (CY - 7) + 'v' + (u % 5 === 0 ? 6 : 3);
+        el('path', { d: t, stroke: 'var(--ink-3)', 'stroke-width': 1 }, post);
+      }
+      el('rect', { x: PAD, y: CY - 10, width: E - 6 - PAD, height: 20, rx: 3, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      el('rect', { x: E - 9, y: CY - 13, width: 9, height: 26, rx: 2.5, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      el('circle', { cx: E - 4.5, cy: CY - 13, r: 2.2, fill: 'var(--m-alloy-hi)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var sad = el('g', {}, s);
+      el('rect', { x: -6, y: -7, width: 7, height: 14, rx: 2, fill: 'var(--bike)' }, sad);
+      el('path', { d: 'M1 -3 L5 -3 M1 3 L5 3', stroke: 'var(--ink)', 'stroke-width': 1.2 }, sad);
+      el('path', { d: 'M4 -22 C10 -21 11 -14 11 -4 L11 14 C11 21 9 23 6 23 C4 23 3 21 3 18 L3 -18 C3 -21 3 -22 4 -22 Z', fill: 'var(--m-leather)', stroke: 'var(--ink)', 'stroke-width': 1 }, sad);
+      return { resize: build,
+        step: function (dt, c) {
+          var tgt = clamp(-c.s.v * 9, -16, 16);
+          if (reduced.matches) { nod.x = 0; return false; }
+          for (var h = 0; h < dt; h += STEP) springStep(nod, tgt, 260, 9, STEP);
+          return Math.abs(nod.x - tgt) > .05 || Math.abs(nod.v) > .3;
+        },
+        render: function (p, v, c) {
+          var x = gx(c, p);
+          post.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+          fill.setAttribute('width', Math.max(0, x + 16));
+          sad.setAttribute('transform', 'translate(' + r1(x) + ' ' + CY + ') rotate(' + r1(nod.x) + ' 0 0)');
+        } };
+    } });
+
+  /* Spirit level */
+  C.push({ name: 'Spirit level', kind: 'New',
+    idea: 'Fitters level saddles with a spirit level, so here the grip is the bubble. It follows your finger a beat behind, like a real bubble in liquid. It stretches when it moves fast, squashes when it stops, and wobbles before it settles.',
+    tech: ['Under-damped follower spring', 'Squash and stretch from velocity', 'Volume kept (w × h)', 'Graduations every 10%'],
+    k: 200, c: 24,
+    geom: function (W) { return { a: PAD + 24, b: W - PAD - 24 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), b = { x: null, v: 0 };
+      var vial = el('rect', { x: PAD, y: CY - 12, height: 24, rx: 12, fill: 'var(--bike-tint)', stroke: 'var(--bike)', 'stroke-width': 1 }, s);
+      var marks = el('path', { stroke: 'var(--ink-3)', 'stroke-width': 1, opacity: .7 }, s);
+      var bub = el('g', {}, s);
+      var body = el('rect', { fill: 'var(--bg)', stroke: 'var(--bike)', 'stroke-width': 1.5 }, bub);
+      var shine = el('path', { fill: 'none', stroke: 'var(--bike)', 'stroke-width': 1.2, 'stroke-linecap': 'round', opacity: .55 }, bub);
+      function lay(W) { var g = ctl.geom(), d = ''; vial.setAttribute('width', W - PAD * 2); for (var i = 0; i <= 10; i++) { var x = r1(g.a + (g.b - g.a) * i / 10); d += 'M' + x + ' ' + (CY - 12) + 'v' + (i % 5 ? 3 : 5) + 'M' + x + ' ' + (CY + 12) + 'v-' + (i % 5 ? 3 : 5); } marks.setAttribute('d', d); }
+      return { resize: lay,
+        step: function (dt, c) {
+          var t = gx(c, c.s.x);
+          if (b.x === null || reduced.matches) { b.x = t; b.v = 0; return false; }
+          for (var h = 0; h < dt; h += STEP) springStep(b, t, 170, 10, STEP);
+          return Math.abs(b.x - t) > .05 || Math.abs(b.v) > 2;
+        },
+        render: function (p, v, c) {
+          if (b.x === null) b.x = gx(c, p);
+          var st = Math.min(.55, Math.abs(b.v) / 900), w = 34 * (1 + st), hh = 15 / Math.sqrt(1 + st);
+          body.setAttribute('x', r1(-w / 2)); body.setAttribute('y', r1(-hh / 2)); body.setAttribute('width', r1(w)); body.setAttribute('height', r1(hh)); body.setAttribute('rx', r1(hh / 2));
+          shine.setAttribute('d', 'M' + r1(-w / 2 + 6) + ' ' + r1(-hh / 2 + 3.5) + 'h' + r1(w * .35));
+          bub.setAttribute('transform', 'translate(' + r1(b.x) + ' ' + CY + ')');
+        } };
+    } });
+
+  /* Plumb bob */
+  C.push({ name: 'Plumb bob', kind: 'New',
+    idea: 'A fitter\'s plumb bob hangs from a carriage on a rail. Drag the carriage and the bob swings behind it on real pendulum physics. Stop sharply and it swings past, then sways back and settles. It is hard to resist flicking it back and forth.',
+    tech: ['Driven pendulum (θ″ = −g sinθ − a cosθ)', 'Carriage acceleration from motion', 'Light damping', 'Brass bob, ink outline'],
+    k: 200, c: 26,
+    geom: function (W) { return { a: PAD + 14, b: W - PAD - 14 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), th = { x: 0, v: 0 }, acc = accel(), L = 19, RAIL = 9;
+      var fill = tint(s);
+      var rail = el('path', { stroke: 'var(--ink-3)', 'stroke-width': 1 }, s);
+      var floor = el('path', { stroke: 'var(--rule)', 'stroke-width': 1 }, s);
+      var str = el('path', { stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var bob = el('g', {}, s);
+      el('path', { d: 'M-2.5 0h5l1.5 3.5c3.5 2.5 3.5 7 .5 9.5L0 20l-4.5-7c-3-2.5-3-7 .5-9.5Z', fill: 'var(--m-tyre-hi)', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-linejoin': 'round' }, bob);
+      el('path', { d: 'M-2.6 6.5h5.2', stroke: 'var(--ink)', 'stroke-width': .8, opacity: .5 }, bob);
+      var car = el('rect', { x: -9, y: RAIL - 4, width: 18, height: 8, rx: 3, fill: 'var(--bike)' }, s);
+      return {
+        resize: function (W) { rail.setAttribute('d', 'M' + PAD + ' ' + (RAIL + .5) + 'H' + (W - PAD)); floor.setAttribute('d', 'M' + PAD + ' ' + (H - 2.5) + 'H' + (W - PAD)); },
+        step: function (dt, c) {
+          var a = acc(gx(c, c.s.x), dt);
+          if (reduced.matches) { th.x = 0; th.v = 0; return false; }
+          var Le = 34, G = 2400;
+          for (var h = 0; h < dt; h += STEP) { var al = -(G / Le) * Math.sin(th.x) - (a / Le) * Math.cos(th.x) - 1.6 * th.v; th.v += al * STEP; th.x += th.v * STEP; th.x = clamp(th.x, -1.25, 1.25); }
+          return Math.abs(th.x) > .003 || Math.abs(th.v) > .02 || Math.abs(a) > 5;
+        },
+        render: function (p, v, c) {
+          var x = gx(c, p), ty = RAIL + 4, bx = x + L * Math.sin(th.x), by = ty + L * Math.cos(th.x);
+          fill.setAttribute('width', Math.max(0, x + 12));
+          car.setAttribute('x', r1(x - 9));
+          str.setAttribute('d', 'M' + r1(x) + ' ' + ty + 'L' + r1(bx) + ' ' + r1(by));
+          bob.setAttribute('transform', 'translate(' + r1(bx) + ' ' + r1(by) + ') rotate(' + r1(-th.x * 57.2958) + ')');
+        } };
+    } });
+
+  /* Vernier calliper */
+  C.push({ name: 'Vernier calliper', kind: 'New',
+    idea: 'The tool for measuring parts to a tenth of a millimetre. Together, the jaws are closed. Drag the amber jaw and they open, with the thumb wheel rolling along the beam and a reading in the gap between the jaws.',
+    tech: ['Jaws closed at 0%', 'Thumb wheel rolls with travel', 'Beam scale every 4 px', 'Mono reading in the gap'],
+    k: 240, c: 26,
+    geom: function (W) { return { a: PAD + 12, b: W - PAD - 30 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), FX = PAD + 12;
+      var fill = tint(s);
+      var beam = el('rect', { x: PAD, y: 9, height: 12, rx: 2, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var scale = el('path', { stroke: 'var(--ink)', 'stroke-width': .8, opacity: .7 }, s);
+      el('path', { d: 'M' + PAD + ' 9 h12 V50 h-3 l-9 -16 Z', fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-linejoin': 'round' }, s);
+      var read = el('text', { y: 42, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace', 'font-size': 10, 'font-weight': 600, fill: 'var(--ink-2)' }, s);
+      var head = el('g', {}, s);
+      el('path', { d: 'M0 21 V50 h3 l9 -16 V21 Z', fill: 'var(--bike)', stroke: 'var(--bike)', 'stroke-width': 1, 'stroke-linejoin': 'round' }, head);
+      el('rect', { x: -1, y: 6, width: 27, height: 18, rx: 3, fill: 'var(--bg)', stroke: 'var(--bike)', 'stroke-width': 1.5 }, head);
+      var vd = ''; for (var i = 0; i <= 6; i++) vd += 'M' + r1(3 + i * 3.6) + ' 18v' + (i % 5 ? 3 : 5);
+      el('path', { d: vd, stroke: 'var(--bike)', 'stroke-width': .9 }, head);
+      var wheel = el('g', {}, head);
+      el('circle', { r: 5.5, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, wheel);
+      el('path', { d: 'M-5 0h10M0 -5v10M-3.5 -3.5l7 7M3.5 -3.5l-7 7', stroke: 'var(--ink)', 'stroke-width': .7, opacity: .7 }, wheel);
+      function lay(W) { beam.setAttribute('width', W - PAD * 2); var d = ''; for (var u = 0, x = FX; x < W - PAD - 2; x += 4, u++) d += 'M' + x + ' 9v' + (u % 10 === 0 ? 6 : u % 5 === 0 ? 4.5 : 3); scale.setAttribute('d', d); }
+      return { resize: lay, render: function (p, v, c) {
+        var x = gx(c, p), gap = x - FX;
+        head.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+        wheel.setAttribute('transform', 'translate(19 31) rotate(' + r1(gap / 5.5 * 57.3) + ')');
+        fill.setAttribute('width', Math.max(0, x + 30));
+        read.setAttribute('x', r1(FX + gap / 2)); read.setAttribute('opacity', r1(clamp((gap - 34) / 16)));
+        read.textContent = (clamp(p) * 100).toFixed(1);
+      } };
+    } });
+
+  /* Bar tape */
+  C.push({ name: 'Unwrap the bar tape', kind: 'New',
+    idea: 'Honey leather tape peels off the handlebar as you pull its end. The wrap on the bar gets shorter turn by turn, and the perforations travel with the tape. Put the bike back together and it winds back on, neatly.',
+    tech: ['Clip-path wrap that shrinks', 'Dash offset moves with the tape', 'Leading turn tilts with speed', 'Honey leather and alloy'],
+    k: 220, c: 24,
+    geom: function (W) { return { a: PAD + 60 + 18, b: W - PAD - 8 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), BL = 60, id = uid('bt');
+      var fill = tint(s);
+      el('rect', { x: PAD, y: CY - 9, width: BL, height: 18, rx: 4, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var clip = el('clipPath', { id: id }, el('defs', {}, s)), cr = el('rect', { x: PAD, y: CY - 10, height: 20 }, clip);
+      var wrap = el('g', { 'clip-path': 'url(#' + id + ')' }, s), d = '';
+      el('rect', { x: PAD, y: CY - 9, width: BL, height: 18, rx: 4, fill: 'var(--m-leather)' }, wrap);
+      for (var x = PAD - 10; x < PAD + BL + 10; x += 6) d += 'M' + x + ' ' + (CY + 9) + 'l8 -18';
+      el('path', { d: d, stroke: 'var(--ink)', 'stroke-width': .9, opacity: .55 }, wrap);
+      el('rect', { x: PAD, y: CY - 9, width: BL, height: 18, rx: 4, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1 }, wrap);
+      var strip = el('rect', { y: CY - 6, height: 12, rx: 1.5, fill: 'var(--m-leather)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var perf = el('path', { stroke: 'var(--ink)', 'stroke-width': 1.2, 'stroke-dasharray': '1.2 4', 'stroke-linecap': 'round', opacity: .5 }, s);
+      var lead = el('path', { fill: 'var(--m-leather)', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-linejoin': 'round' }, s);
+      var tab = el('rect', { y: CY - 8, width: 7, height: 16, rx: 2, fill: 'var(--bike)' }, s);
+      return { render: function (p, v, c) {
+        var x = gx(c, p), cover = Math.max(3, BL * (1 - clamp(p) * .92)), w0 = PAD + cover, lean = clamp(v * 1.5, -3, 3);
+        cr.setAttribute('width', r1(cover));
+        strip.setAttribute('x', r1(w0)); strip.setAttribute('width', Math.max(0, r1(x - w0)));
+        perf.setAttribute('d', 'M' + r1(w0 + 3) + ' ' + CY + 'H' + r1(x - 4)); perf.setAttribute('stroke-dashoffset', r1(-x));
+        lead.setAttribute('d', 'M' + r1(w0 - 4) + ' ' + (CY + 9) + 'L' + r1(w0 + 4 + lean) + ' ' + (CY - 9) + 'L' + r1(w0 + 8 + lean) + ' ' + (CY - 6) + 'L' + r1(w0 + 8) + ' ' + (CY + 6) + 'Z');
+        tab.setAttribute('x', r1(x - 3.5));
+        fill.setAttribute('width', Math.max(0, x + 12));
+      } };
+    } });
+
+  /* Bottle out of the cage */
+  C.push({ name: 'Bottle from the cage', kind: 'New',
+    idea: 'Pull your bottle out of its cage by the cap. The water inside sloshes as you go: it tilts against a quick pull, rocks back and forth when you stop, and slowly calms. The cage stays put on its bolts.',
+    tech: ['Slosh spring driven by acceleration', 'Water clipped to the bottle', 'Cage wires drawn over the bottle', 'Amber cap is the grip'],
+    k: 210, c: 24,
+    geom: function (W) { return { a: PAD + 2 + 76, b: W - PAD - 4 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), BL = 76, id = uid('bw'), sl = { x: 0, v: 0 }, acc = accel();
+      var fill = tint(s);
+      var bot = el('g', {}, s);
+      var shape = 'M-' + BL + ' ' + (CY - 6) + 'q0 -8 8 -8 H-22 q6 0 9 5 l3 3 h4 v12 h-4 l-3 3 q-3 5 -9 5 H-' + (BL - 8) + ' q-8 0 -8 -8 Z';
+      var clip = el('clipPath', { id: id }, el('defs', {}, s)); el('path', { d: shape }, clip);
+      el('path', { d: shape, fill: 'var(--bg)' }, bot);
+      var water = el('path', { fill: 'color-mix(in srgb, var(--bike) 22%, var(--bg))', 'clip-path': 'url(#' + id + ')' }, bot);
+      var surf = el('path', { stroke: 'var(--bike)', 'stroke-width': 1, opacity: .7, 'clip-path': 'url(#' + id + ')' }, bot);
+      el('path', { d: shape, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1, 'stroke-linejoin': 'round' }, bot);
+      el('path', { d: 'M-' + (BL - 14) + ' ' + (CY - 14) + 'v28M-' + (BL - 20) + ' ' + (CY - 14) + 'v28', stroke: 'var(--ink)', 'stroke-width': .8, opacity: .35 }, bot);
+      el('rect', { x: -7, y: CY - 5, width: 7, height: 10, rx: 2.5, fill: 'var(--bike)' }, bot);
+      var cage = 'M' + (PAD + 1) + ' ' + (CY - 15) + 'H' + (PAD + 50) + 'q8 0 8 6M' + (PAD + 1) + ' ' + (CY + 15) + 'H' + (PAD + 50) + 'q8 0 8 -6M' + (PAD + 1) + ' ' + (CY - 15) + 'V' + (CY + 15);
+      el('path', { d: cage, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 3.6, 'stroke-linecap': 'round' }, s);
+      el('path', { d: cage, fill: 'none', stroke: 'var(--m-alloy)', 'stroke-width': 2, 'stroke-linecap': 'round' }, s);
+      el('circle', { cx: PAD + 16, cy: CY + 17.5, r: 1.6, fill: 'var(--ink-3)' }, s); el('circle', { cx: PAD + 40, cy: CY + 17.5, r: 1.6, fill: 'var(--ink-3)' }, s);
+      return {
+        step: function (dt, c) {
+          var a = acc(gx(c, c.s.x), dt);
+          if (reduced.matches) { sl.x = 0; sl.v = 0; return false; }
+          for (var h = 0; h < dt; h += STEP) { var al = -90 * sl.x - 2.2 * sl.v - a * 0.0009; sl.v += al * STEP; sl.x += sl.v * STEP; sl.x = clamp(sl.x, -.5, .5); }
+          return Math.abs(sl.x) > .002 || Math.abs(sl.v) > .01 || Math.abs(a) > 5;
+        },
+        render: function (p, v, c) {
+          var x = gx(c, p), m = -BL / 2, k = Math.tan(sl.x), y0 = CY + 1 + k * (-BL - 2 - m), y1 = CY + 1 + k * (2 - m);
+          water.setAttribute('d', 'M' + (-BL - 2) + ' ' + r1(y0) + 'L2 ' + r1(y1) + 'V' + (CY + 20) + 'H' + (-BL - 2) + 'Z');
+          surf.setAttribute('d', 'M' + (-BL - 2) + ' ' + r1(y0) + 'L2 ' + r1(y1));
+          bot.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+          fill.setAttribute('width', Math.max(0, x + 10));
+        } };
+    } });
+
+  /* Track pump */
+  C.push({ name: 'Track pump', kind: 'New',
+    idea: 'Pull the pump\'s T-handle out of the barrel and the gauge needle climbs with it, overshooting and bouncing like a real needle. Push it back in hard and a little puff of air escapes from the barrel.',
+    tech: ['Bouncy needle spring', 'Puff triggered by a fast push', 'Gauge ticks at every 45°', 'Amber T-handle'],
+    k: 230, c: 26,
+    geom: function (W) { return { a: PAD + 112 + 14, b: W - PAD - 8 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), E = PAD + 112, GX = PAD + 13, nd = { x: 0, v: 0 }, puff = 0;
+      var fill = tint(s);
+      el('rect', { x: GX + 10, y: CY - 3, width: 8, height: 6, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var shaft = el('rect', { x: E - 2, y: CY - 2.5, height: 5, rx: 1, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      el('rect', { x: GX + 18, y: CY - 9, width: E - GX - 18, height: 18, rx: 4, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      el('rect', { x: E - 7, y: CY - 10.5, width: 7, height: 21, rx: 2, fill: 'var(--m-alloy)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      el('circle', { cx: GX, cy: CY, r: 13, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, s);
+      var tk = ''; for (var i = 0; i <= 6; i++) { var a = (-225 + i * 45) * Math.PI / 180; tk += 'M' + r1(GX + Math.cos(a) * 9.5) + ' ' + r1(CY + Math.sin(a) * 9.5) + 'L' + r1(GX + Math.cos(a) * 11.5) + ' ' + r1(CY + Math.sin(a) * 11.5); }
+      el('path', { d: tk, stroke: 'var(--ink-3)', 'stroke-width': 1 }, s);
+      var needle = el('path', { d: 'M0 0L0 -9.5', stroke: 'var(--bike)', 'stroke-width': 1.75, 'stroke-linecap': 'round' }, s);
+      el('circle', { cx: GX, cy: CY, r: 2, fill: 'var(--ink)' }, s);
+      var pf = el('path', { fill: 'none', stroke: 'var(--ink-3)', 'stroke-width': 1.2, 'stroke-linecap': 'round' }, s);
+      var handle = el('g', {}, s);
+      el('rect', { x: 0, y: CY - 19, width: 7, height: 38, rx: 3.5, fill: 'var(--bike)' }, handle);
+      return {
+        step: function (dt, c) {
+          if (c.s.v < -2.2 && !reduced.matches) puff = 1;
+          puff = Math.max(0, puff - dt * 2.4);
+          var t = clamp(c.s.x);
+          if (reduced.matches) { nd.x = t; return false; }
+          for (var h = 0; h < dt; h += STEP) springStep(nd, t, 320, 7, STEP);
+          return Math.abs(nd.x - t) > .002 || Math.abs(nd.v) > .01 || puff > 0;
+        },
+        render: function (p, v, c) {
+          var x = gx(c, p);
+          shaft.setAttribute('width', Math.max(0, r1(x - E + 2)));
+          handle.setAttribute('transform', 'translate(' + r1(x - 3.5) + ' 0)');
+          needle.setAttribute('transform', 'translate(' + GX + ' ' + CY + ') rotate(' + r1(-135 + 270 * clamp(nd.x, -.05, 1.05)) + ')');
+          fill.setAttribute('width', Math.max(0, x + 12));
+          if (puff > 0) { var o = (1 - puff) * 9, d = ''; [-7, 0, 7].forEach(function (dy) { d += 'M' + r1(E + 4 + o) + ' ' + (CY + dy - 14) + 'h' + r1(4 * puff); }); pf.setAttribute('d', d); pf.setAttribute('opacity', r1(puff)); }
+          else pf.setAttribute('d', '');
+        } };
+    } });
+
+  /* Zip tie */
+  C.push({ name: 'Zip tie', kind: 'New',
+    idea: 'Every workshop runs on zip ties. Pull the amber tail and the strap ratchets through the head one tooth at a time. Each tooth makes the head click and jump, and the loop on the other side pulls tighter. It is oddly satisfying.',
+    tech: ['Tooth-by-tooth ratchet', 'Head kick spring on each click', 'Loop tightens with travel', 'navigator.vibrate on clicks'],
+    k: 240, c: 26,
+    geom: function (W) { return { a: PAD + 44 + 22, b: W - PAD - 16 }; },
+    build: function (trk, ctl) {
+      var s = svgIn(trk), HX = PAD + 28, HW = 16, id = uid('zt'), kick = { x: 0, v: 0 }, lastT = null, P = 4;
+      var fill = tint(s);
+      var loopO = el('path', { fill: 'none', stroke: 'var(--ink)', 'stroke-width': 7.5 }, s);
+      var loopI = el('path', { fill: 'none', stroke: 'var(--bg)', 'stroke-width': 5.5 }, s);
+      var clip = el('clipPath', { id: id }, el('defs', {}, s)), cr = el('rect', { x: HX + HW, y: 0, height: H }, clip);
+      var sg = el('g', { 'clip-path': 'url(#' + id + ')' }, s), strap = el('g', {}, sg);
+      function build(W) {
+        strap.innerHTML = '';
+        el('rect', { x: -W, y: CY - 4, width: W, height: 8, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, strap);
+        var d = ''; for (var x = -P; x > -W; x -= P) d += 'M' + x + ' ' + (CY - 4) + 'l-2.5 -2.5 v2.5';
+        el('path', { d: d, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': .9, 'stroke-linejoin': 'round' }, strap);
+      }
+      var tip = el('path', { d: 'M-1 -4 h9 l7 3 v2 l-7 3 h-9 Z', fill: 'var(--bike)' }, s);
+      var head = el('g', {}, s);
+      el('rect', { x: HX, y: CY - 10, width: HW, height: 20, rx: 3, fill: 'var(--bg)', stroke: 'var(--ink)', 'stroke-width': 1 }, head);
+      el('path', { d: 'M' + (HX + 4) + ' ' + (CY - 4) + 'h8M' + (HX + 4) + ' ' + (CY + 4) + 'h8', stroke: 'var(--ink)', 'stroke-width': 1, opacity: .45 }, head);
+      return { resize: build,
+        step: function (dt, c) {
+          var t = Math.floor(gx(c, c.s.x) / P);
+          if (lastT !== null && t !== lastT && !reduced.matches) { kick.v += (t > lastT ? 1 : -1) * 70; if (c.drag) buzz(); }
+          lastT = t;
+          if (reduced.matches) { kick.x = 0; return false; }
+          for (var h = 0; h < dt; h += STEP) springStep(kick, 0, 900, 22, STEP);
+          return Math.abs(kick.x) > .02 || Math.abs(kick.v) > .2;
+        },
+        render: function (p, v, c) {
+          var x = gx(c, p), cp = clamp(p, -.1, 1.1), rx = lerp(13, 6, cp), ry = lerp(17, 7, cp), cx = HX - rx + 2;
+          var lp = 'M' + HX + ' ' + r1(CY - 3) + 'C' + r1(cx + rx * .2) + ' ' + r1(CY - ry * 1.1) + ' ' + r1(cx - rx * 1.2) + ' ' + r1(CY - ry) + ' ' + r1(cx - rx) + ' ' + CY + 'C' + r1(cx - rx * 1.2) + ' ' + r1(CY + ry) + ' ' + r1(cx + rx * .2) + ' ' + r1(CY + ry * 1.1) + ' ' + HX + ' ' + r1(CY + 3);
+          loopO.setAttribute('d', lp); loopI.setAttribute('d', lp);
+          cr.setAttribute('width', Math.max(0, x - HX - HW));
+          strap.setAttribute('transform', 'translate(' + r1(x) + ' 0)');
+          tip.setAttribute('transform', 'translate(' + r1(x) + ' ' + CY + ')');
+          head.setAttribute('transform', 'translate(' + r1(kick.x * .08) + ' 0) rotate(' + r1(kick.x * .12) + ' ' + (HX + HW / 2) + ' ' + CY + ')');
+          fill.setAttribute('width', Math.max(0, x + 20));
+        } };
+    } });
+
+  /* ---------------- Mount ---------------- */
+  C.forEach(function (def, i) { ctls.push(new Ctl(def, i + 1)); });
+  ctls.forEach(function (c) { c.dirty = true; });
+  wake();
+
+  /* Invitation scheduler: every 7–12 s, give one visible, idle control a tug. Quiet for 10 s after
+     any interaction, skips controls touched in the last 45 s, prefers the one tugged longest ago. */
+  (function invite() {
+    setTimeout(function () {
+      var now = performance.now();
+      if (!document.hidden && !reduced.matches && now - lastUser > 10000) {
+        var c = ctls.filter(function (k) { return k.visible && k !== owner && !k.drag && !k.teasing && now - k.lastTouch > 45000 && Math.abs(k.s.x - k.target) < .01 && Math.abs(k.s.v) < .01; })
+          .sort(function (a, b) { return a.lastTease - b.lastTease; });
+        if (c.length) c[Math.floor(Math.random() * Math.min(2, c.length))].tease();
+      }
+      invite();
+    }, ctls.every(function (k) { return k.lastTease < 0; }) ? 2600 : 7000 + Math.random() * 5000);
+  })();
+  document.addEventListener('pointerdown', function () { lastUser = performance.now(); }, true);
+  document.addEventListener('keydown', function () { lastUser = performance.now(); }, true);
+
+  document.getElementById('all').onclick = function () {
+    if (owner) owner.card.classList.remove('is-owner');
+    owner = null; ownerEl.textContent = 'All twelve';
+    var to = bikeTarget > .5 ? 0 : 1; bikeTarget = to; bikeSpring.x = clamp(bikeSpring.x);
+    ctls.forEach(function (c) { c.seek(to); });
+    this.querySelector('span').textContent = to ? 'Put them all together' : 'Take them all apart';
+    this.querySelector('use').setAttribute('href', to ? '#i-collapse' : '#i-expand');
+  };
+  // When someone grabs a control, the bike spring starts from where the bike is.
+  var _own = Ctl.prototype.own;
+  Ctl.prototype.own = function () { _own.call(this); bikeSpring.x = this.value(); bikeTarget = this.target; };
+  document.getElementById('theme').onclick = function () { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; ctls.forEach(function (c) { c.dirty = true; }); wake(); };
+  document.querySelectorAll('input[name=w]').forEach(function (r) { r.addEventListener('change', function () {
+    root.dataset.w = r.value; document.querySelectorAll('.dockrow').forEach(function (d) { d.style.setProperty('--dock-w', r.value === 'phone' ? '358px' : '560px'); });
+  }); });
+})();
+</script>
+</body>
+</html>

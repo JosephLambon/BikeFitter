@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectScrubberAligned } from './scrubber.js';
 
 /* Regressions for the exploded layout, the info-card rule, the build swaps, zoom and the phone
    layouts (AGENTS.md §5.1). */
@@ -25,42 +26,6 @@ function overlaps(page: Page) {
     }
     return [...bad];
   });
-}
-
-/** Where the scrubber's cable ends, its grip (the slider thumb) and the nudge arrow sit, in
-    page px. The grip and the arrow belong on the cable's end, on the track's centre line. */
-function scrubberEnds(page: Page) {
-  return page.evaluate(() => {
-    const box = document.querySelector<HTMLElement>('[data-scrubber="cable"]')!;
-    const svg = box.querySelector('svg')!;
-    const path = svg.querySelector('path')!;
-    const p = path.getPointAtLength(path.getTotalLength()).matrixTransform(svg.getScreenCTM()!);
-    const mid = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
-    const t = box.querySelector('.MuiSlider-thumb')!.getBoundingClientRect();
-    const nudge = box.querySelector('[data-testid="scrubber-nudge"]');
-    const b = box.getBoundingClientRect();
-    return { cable: { x: p.x, y: p.y }, grip: mid(t), nudge: nudge ? mid(nudge.getBoundingClientRect()) : null, centreY: b.top + b.height / 2 };
-  });
-}
-
-async function expectScrubberAligned(page: Page) {
-  const slider = page.getByRole('slider', { name: 'How far apart the bike is' });
-  for (const v of [0, 40, 100]) {
-    await slider.evaluate((el, n) => {
-      const input = el as HTMLInputElement;
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, String(n));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }, v);
-    await expect(slider).toHaveAttribute('aria-valuenow', String(v));
-    const e = await scrubberEnds(page);
-    expect(Math.abs(e.cable.y - e.centreY), `cable end on the centre line at ${v}%`).toBeLessThanOrEqual(1);
-    expect(Math.abs(e.grip.y - e.cable.y), `grip level with the cable end at ${v}%`).toBeLessThanOrEqual(1);
-    expect(Math.abs(e.grip.x - e.cable.x), `grip on the cable end at ${v}%`).toBeLessThanOrEqual(2);
-    if (v === 0) {
-      expect(e.nudge, 'the nudge arrow shows while together').not.toBeNull();
-      expect(Math.abs(e.nudge!.y - e.cable.y), 'nudge arrow level with the cable end').toBeLessThanOrEqual(1);
-    }
-  }
 }
 
 async function takeApart(page: Page) {
@@ -305,10 +270,51 @@ test.describe('Reset zoom', () => {
   });
 });
 
+/** Long enough to see an invitation from any moment: its interval (INVITE.every, 4 s) plus a tug. */
+const INVITE_WAIT = 5200;
+
+/** The biggest sideways shift of the grip from its resting place over `ms`, in px. */
+function gripTravel(page: Page, ms: number) {
+  return page.evaluate((span) => new Promise<number>((done) => {
+    const thumb = document.querySelector<HTMLElement>('[data-scrubber] .MuiSlider-thumb')!;
+    let most = 0;
+    const t0 = performance.now();
+    const look = () => {
+      most = Math.max(most, Math.abs(parseFloat(getComputedStyle(thumb).marginLeft) || 0));
+      if (performance.now() - t0 < span) requestAnimationFrame(look); else done(most);
+    };
+    requestAnimationFrame(look);
+  }), ms);
+}
+
 test.describe('Explode scrubber', () => {
-  test('the grip and nudge arrow sit on the cable’s end, level with it, on a desktop', async ({ page }) => {
+  test('the grip sits on the coil’s end, level with it, on a desktop', async ({ page }) => {
     await page.goto('/bike');
+    await expect(page.locator('[data-scrubber="coil"]')).toBeAttached();
     await expectScrubberAligned(page);
+  });
+
+  test('the coil tugs every few seconds until it is first moved, then stays still', async ({ page }) => {
+    await page.goto('/bike');
+    const coil = page.locator('[data-scrubber="coil"]');
+    await expect(coil).toHaveAttribute('data-invite', 'on');
+    const tug = await gripTravel(page, 2000); // the first tug comes soon after the page opens
+    expect(tug, 'pulls out a little').toBeGreaterThan(3);
+    expect(tug, 'only a little (8 px with a mouse)').toBeLessThanOrEqual(10);
+    const before = await page.evaluate(() => scrollY);
+    await page.getByRole('slider', { name: 'How far apart the bike is' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(coil).toHaveAttribute('data-invite', 'off');
+    await page.waitForTimeout(800); // a tug under way settles
+    expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
+    expect(await page.evaluate(() => scrollY)).toBe(before);
+  });
+
+  test('never tugs with reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/bike');
+    await expect(page.locator('[data-scrubber="coil"]')).toHaveAttribute('data-invite', 'off');
+    expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
   });
 });
 
@@ -365,9 +371,64 @@ test.describe('Phone, portrait', () => {
     expect(await noScroll(page)).toEqual({ pageX: true, stage: true, zoom: 1 });
   });
 
-  test('in the dock, the grip and nudge arrow sit on the cable’s end, level with it', async ({ page }) => {
+  test('in the dock, the grip sits on the coil’s end, level with it', async ({ page }) => {
     await page.goto('/bike');
     await expectScrubberAligned(page);
+  });
+
+  test('in the dock, the coil keeps tugging through a stray touch, and stops once a thumb moves it', async ({ page }) => {
+    await page.goto('/bike');
+    const box = (await page.locator('[data-scrubber="coil"]').boundingBox())!;
+    // A thumb landing on the dock to scroll or swipe: pointerdown, no change.
+    await page.locator('[data-scrubber="coil"]').dispatchEvent('pointerdown', { pointerType: 'touch' });
+    await expect(page.locator('[data-scrubber="coil"]')).toHaveAttribute('data-invite', 'on');
+    // Touch screens pull further (12 px, not 8), so it reads at a phone's smaller pixels.
+    expect(await gripTravel(page, INVITE_WAIT)).toBeGreaterThan(10);
+    await page.touchscreen.tap(box.x + box.width - 30, box.y + box.height / 2);
+    await expect(page.locator('[data-scrubber="coil"]')).toHaveAttribute('data-invite', 'off');
+    await page.waitForTimeout(800);
+    expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
+  });
+
+  test('the coil tugs on every 4 s beat, even when frames are stamped before the timer that woke them (a busy phone)', async ({ page }) => {
+    test.setTimeout(30_000);
+    // Chrome stamps each frame with the time it began; under load, a timer often runs after a
+    // frame has begun, so the frame it asks for is stamped before it asked. Make every frame so.
+    await page.addInitScript(() => {
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) => raf((t) => cb(Math.min(t, performance.now()) - 20));
+    });
+    await page.goto('/bike');
+    const starts = await page.evaluate(() => new Promise<number[]>((done) => {
+      const seen: number[] = [], t0 = performance.now();
+      let on = false;
+      const look = () => {
+        const box = document.querySelector<HTMLElement>('[data-scrubber="coil"]');
+        const v = Math.abs(parseFloat(box?.style.getPropertyValue('--tug') ?? '') || 0);
+        if (v > 4 && !on) { on = true; seen.push(performance.now() - t0); }
+        if (v < 0.5) on = false;
+        if (performance.now() - t0 < 13_500) setTimeout(look, 8); else done(seen);
+      };
+      look();
+    }));
+    expect(starts.length, `tugs at ${starts.map(Math.round)}`).toBeGreaterThanOrEqual(3);
+    for (let k = 1; k < starts.length; k++) expect(Math.abs(starts[k] - starts[k - 1] - 4000)).toBeLessThan(250);
+  });
+
+  test('once moved, the coil stays still when the phone turns and turns back', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.goto('/bike');
+    const coil = page.locator('[data-scrubber="coil"]');
+    const box = (await coil.boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width - 30, box.y + box.height / 2);
+    await expect(coil).toHaveAttribute('data-invite', 'off');
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(page.locator('[data-layout="landscape"]')).toBeAttached();
+    await expect(coil).toHaveAttribute('data-invite', 'off');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-layout="drawer"]')).toBeAttached();
+    await expect(coil).toHaveAttribute('data-invite', 'off');
+    expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
   });
 
   test('pinching zooms the drawing only: no page zoom, no scroll, no scrollbars', async ({ page }) => {
@@ -499,7 +560,7 @@ test.describe('Phone, portrait', () => {
 test.describe('Phone, landscape', () => {
   test.use({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 
-  test('the grip and nudge arrow sit on the cable’s end, level with it', async ({ page }) => {
+  test('the grip sits on the coil’s end, level with it', async ({ page }) => {
     await page.goto('/bike');
     await expectScrubberAligned(page);
   });
@@ -526,4 +587,54 @@ test.describe('Phone, landscape', () => {
     expect(c.x).toBeGreaterThanOrEqual(stage.x + stage.width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
+});
+
+test.describe('Phone, portrait: the build tray', () => {
+  test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+  const box = async (page: Page, id: string) => (await page.getByTestId(id).boundingBox())!;
+
+  // iPhone 14 in browser dev tools, iPhone 14 with Safari's bars, iPhone SE.
+  for (const [w, h] of [[390, 844], [390, 664], [375, 667]]) {
+    test(`opens between the bike and the dock, never over the bike or the Part details tab, at ${w}×${h}`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto('/bike');
+      const stage = await box(page, 'stage'), dock = await box(page, 'dock');
+      await page.getByRole('button', { name: /^Build/ }).click();
+      await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'true');
+      await page.waitForTimeout(600);
+      const tray = await box(page, 'build-tray');
+      const stage2 = await box(page, 'stage'), dock2 = await box(page, 'dock');
+      expect(stage2, 'the bike never moves').toEqual(stage);
+      expect(dock2.height, 'the dock never grows').toBeCloseTo(dock.height, 0);
+      expect(tray.y, 'tray starts below the bike').toBeGreaterThanOrEqual(stage.y + stage.height - 1);
+      if (h > 720) {
+        const tab = await box(page, 'drawer-tab');
+        expect(tray.y + tray.height, 'tray ends above the Part details tab').toBeLessThanOrEqual(tab.y + 1);
+        expect(tab.y + tab.height, 'the tab stays above the dock').toBeLessThanOrEqual(dock2.y + 1);
+        await expect(page.getByTestId('drawer-tab')).toBeInViewport({ ratio: 1 });
+      } else {
+        // Too short for both: the tab steps aside while the tray is open, and comes back after.
+        await expect(page.getByTestId('drawer-tab')).toBeHidden();
+        expect(tray.y + tray.height, 'tray ends above the dock').toBeLessThanOrEqual(dock2.y + 1);
+      }
+      // Room for at least two whole options before it scrolls.
+      for (const name of ['Gears', 'Brakes']) {
+        const r = (await page.getByTestId('build-tray').locator('[data-changed]').filter({ hasText: name }).boundingBox())!;
+        expect(r.y + r.height, `${name} fits without scrolling`).toBeLessThanOrEqual(tray.y + tray.height + 1);
+      }
+      // Nothing draws over the tray.
+      const onTop = await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('[data-testid="build-tray"]'), [tray.x + tray.width / 2, tray.y + Math.min(30, tray.height / 2)]);
+      expect(onTop, 'the tray is on top where it sits').toBe(true);
+      // Every option can be reached inside the tray, without the page scrolling.
+      const last = page.getByTestId('build-tray').getByText('Mudguards');
+      await last.scrollIntoViewIfNeeded();
+      const l = (await last.boundingBox())!;
+      expect(l.y).toBeGreaterThanOrEqual(tray.y - 1);
+      expect(l.y + l.height).toBeLessThanOrEqual(tray.y + tray.height + 1);
+      expect(await page.evaluate(() => scrollY)).toBe(0);
+      expect(await box(page, 'stage')).toEqual(stage);
+      await page.getByRole('button', { name: /^Build/ }).click();
+      await expect(page.getByTestId('drawer-tab')).toBeInViewport({ ratio: 1 });
+    });
+  }
 });
