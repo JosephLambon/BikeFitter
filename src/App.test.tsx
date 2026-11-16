@@ -9,7 +9,10 @@ describe('app routes and the exploreBike flag', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/bike');
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Explore the bike' })).toHaveAttribute('aria-current', 'page');
+    const link = within(nav).getByRole('link', { name: 'Explore the bike' });
+    expect(link).toHaveAttribute('aria-current', 'page');
+    // Phones show the short label so the nav stays on one line; the link's name stays in full.
+    expect(within(link).getByText('Explore', { exact: true })).toHaveClass('nav-short');
   });
 
   it('flag off: the page does not exist and the nav does not offer it', () => {

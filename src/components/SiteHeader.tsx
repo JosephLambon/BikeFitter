@@ -33,16 +33,20 @@ export function SiteHeader() {
                 <Box
                   component={NavLink}
                   to={t.to}
+                  aria-label={t.label}
                   sx={{
                     display: 'inline-flex', alignItems: 'center', gap: 1, p: '7px 12px', borderRadius: '10px',
-                    fontSize: 14, fontWeight: 500, color: 'var(--ink-2)', textDecoration: 'none', transition: 'background-color .2s ease',
+                    fontSize: 14, fontWeight: 500, color: 'var(--ink-2)', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'background-color .2s ease',
                     '&:hover': { background: 'var(--surface)', color: 'var(--ink)' },
                     '&[aria-current="page"]': { background: 'var(--surface-2)', color: 'var(--ink)' },
                     '& .ico': { width: 17, height: 17, color: 'var(--tone)' },
+                    '& .nav-short': { display: 'none' },
+                    '@media (max-width: 760px)': { '& .nav-full': { display: 'none' }, '& .nav-short': { display: 'inline' } },
                   }}
                 >
                   <Icon name={t.pillar} />
-                  <span>{t.label}</span>
+                  <span className="nav-full">{t.label}</span>
+                  <span className="nav-short">{t.short}</span>
                 </Box>
               </li>
             ))}

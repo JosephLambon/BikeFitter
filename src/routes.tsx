@@ -27,9 +27,10 @@ export function routes(): RouteObject[] {
   ];
 }
 
-/** The tools in the main nav, in Workstand order, once each one is switched on. */
+/** The tools in the main nav, in Workstand order, once each one is switched on.
+    `short` is the label phones show (≤ 760 px), so the nav never wraps onto two lines. */
 export function navTools() {
   return [
-    ...(isEnabled('exploreBike') ? [{ pillar: 'bike' as const, to: '/bike', label: 'Explore the bike' }] : []),
+    ...(isEnabled('exploreBike') ? [{ pillar: 'bike' as const, to: '/bike', label: 'Explore the bike', short: 'Explore' }] : []),
   ];
 }
