@@ -593,12 +593,18 @@ test.describe('Phone, portrait: the build tray', () => {
   test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
   const box = async (page: Page, id: string) => (await page.getByTestId(id).boundingBox())!;
 
-  // iPhone 14 in browser dev tools, iPhone 14 with Safari's bars, iPhone SE.
-  for (const [w, h] of [[390, 844], [390, 664], [375, 667]]) {
-    test(`opens between the bike and the dock, never over the bike or the Part details tab, at ${w}×${h}`, async ({ page }) => {
+  // iPhone 14 in browser dev tools, iPhone 14 with Safari's bars, iPhone SE; each with and
+  // without reduced motion, which must not change a phone's screen.
+  for (const [w, h, reduced] of [[390, 844, false], [390, 664, false], [375, 667, false], [390, 844, true], [375, 667, true]] as const) {
+    test(`opens between the bike and the dock, never over the bike or the Part details tab, at ${w}×${h}${reduced ? ', reduced motion' : ''}`, async ({ page }) => {
+      if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.setViewportSize({ width: w, height: h });
       await page.goto('/bike');
       const stage = await box(page, 'stage'), dock = await box(page, 'dock');
+      // The page is one screen: the header, the bike, the drawer's space and the dock all fit.
+      expect(dock.y + dock.height, 'the dock is on screen').toBeLessThanOrEqual(h);
+      expect(await page.evaluate(() => document.querySelector('#reel')!.getBoundingClientRect().bottom), 'the bench ends at the screen\'s edge').toBeLessThanOrEqual(h);
+      expect(stage.y, 'the bike sits below the header').toBeGreaterThanOrEqual((await page.locator('header').boundingBox())!.height);
       await page.getByRole('button', { name: /^Build/ }).click();
       await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'true');
       await page.waitForTimeout(600);

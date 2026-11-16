@@ -302,21 +302,21 @@ export function ExploreBikePage() {
       <Box
         component="section" id="reel" ref={reelRef} aria-labelledby="bike-h"
         sx={{
-          // Phones: one screen, no reel to scroll through.
+          // Phones: one screen, no reel to scroll through. Reduced motion only changes the larger
+          // screens' reel: a phone's screen is the same either way, and always tucks under the header.
           position: 'relative', height: compact ? 'auto' : '300vh', mt: 'calc(-1 * var(--head-h))',
-          [`@media ${REDUCED}`]: { height: 'auto', mt: 0 },
+          ...(!compact && { [`@media ${REDUCED}`]: { height: 'auto', mt: 0 } }),
         }}
       >
         <Box
           data-layout={land ? 'landscape' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide'}
           sx={{
             position: 'sticky', top: 0, height: '100svh', display: 'grid', overflow: 'hidden',
-            [`@media ${REDUCED}`]: { position: 'relative', height: 'auto', minHeight: '100vh', pt: '32px' },
-            ...(!compact && { gridTemplateRows: 'auto minmax(0, 1fr) auto auto', p: 'calc(var(--head-h) + 32px) 0 24px' }),
-            ...(drawer && {
-              gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)',
-              [`@media ${REDUCED}`]: { position: 'sticky', top: 0, height: '100svh', minHeight: 0, pt: 'var(--head-h)' },
+            ...(!compact && {
+              gridTemplateRows: 'auto minmax(0, 1fr) auto auto', p: 'calc(var(--head-h) + 32px) 0 24px',
+              [`@media ${REDUCED}`]: { position: 'relative', height: 'auto', minHeight: '100vh', pt: '32px' },
             }),
+            ...(drawer && { gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
             ...(portrait && !drawer && {
               gridTemplateRows: 'auto auto auto minmax(0, 1fr)', rowGap: '16px', alignContent: 'start',
               p: 'calc(var(--head-h) + 24px) var(--gutter) 0', width: 'min(560px, 100%)', mx: 'auto',
