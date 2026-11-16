@@ -20,6 +20,8 @@ export interface BuildTrayProps {
   stacked?: boolean;
   /** With `stacked`: label beside its control (a wide panel), not above it (a narrow column). */
   inline?: boolean;
+  /** Fills a bounded slot (the portrait phone layout): sits in a window and scrolls inside it. */
+  fit?: boolean;
 }
 
 const REDUCED = '@media (prefers-reduced-motion: reduce)';
@@ -61,7 +63,7 @@ export function BuildToggle({ open, onOpenChange, build, controls, opensDown = f
   );
 }
 
-export function BuildTray({ build, onChange, open, id, stacked = false, inline = false }: BuildTrayProps) {
+export function BuildTray({ build, onChange, open, id, stacked = false, inline = false, fit = false }: BuildTrayProps) {
   const row = { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center', p: '8px' };
   return (
     <Box
@@ -70,18 +72,20 @@ export function BuildTray({ build, onChange, open, id, stacked = false, inline =
         // Grid rows 0fr ↔ 1fr animate the height; a fade and a small rise go with it.
         display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(8px)',
         width: stacked ? '100%' : 'min(1120px, 100% - 32px)', mx: 'auto',
+        // In a bounded slot: a window no taller than the slot; the options scroll inside it.
+        ...(fit && { minHeight: 0, maxHeight: '100%', borderRadius: '12px', background: 'var(--bg)', boxShadow: '0 0 0 1px var(--rule), var(--shadow)', p: open ? '4px' : 0 }),
         transition: `grid-template-rows .45s ${motion.rise}, opacity .3s ease, transform .45s ${motion.rise}`,
         [REDUCED]: { transition: 'none' },
       }}
     >
-      <Box sx={{ minHeight: 0, overflow: 'hidden' }}>
+      <Box data-testid="build-tray-scroll" sx={{ minHeight: 0, overflow: 'hidden', ...(fit && open && { overflowY: 'auto', overscrollBehavior: 'contain' }) }}>
         <Box
           sx={{
-            display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px', pt: '12px',
+            display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px', pt: fit ? 0 : '12px',
             // Tablets: three cards over two, both rows full width.
             '@media (max-width: 980px)': { gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', '& > *': { gridColumn: 'span 2' }, '& > :nth-of-type(n+4)': { gridColumn: 'span 3' } },
             '@media (max-width: 760px)': { gridTemplateColumns: '1fr', gap: '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } },
-            ...(stacked && { '&&': { gridTemplateColumns: '1fr', gap: '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } } }),
+            ...(stacked && { '&&': { gridTemplateColumns: '1fr', gap: fit ? '4px' : '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } } }),
           }}
         >
           {BUILD_OPTIONS.map((o) => {
@@ -94,6 +98,8 @@ export function BuildTray({ build, onChange, open, id, stacked = false, inline =
                   display: 'grid', gap: '8px', p: '12px', borderRadius: '14px', background: 'var(--surface)',
                   '@media (max-width: 760px)': row,
                   ...(stacked && { '&&': inline ? row : { gridTemplateColumns: '1fr', p: '12px' } }),
+                  // A tight slot: denser rows, so more options show before it scrolls.
+                  ...(fit && { '&&&': { p: '4px 4px 4px 8px', borderRadius: '10px' } }),
                 }}
               >
                 <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', '@media (max-width: 760px)': { pl: '6px' }, ...(stacked && { '&&': { pl: inline ? '6px' : 0 } }) }}>

@@ -6,7 +6,8 @@ import { Icon } from './Icon';
 import { Wrap } from './layout';
 import { ThemeToggle } from './ThemeToggle';
 
-/** Slim translucent header: brand, the tools (each in its own colour) and the theme toggle. */
+/** Slim translucent header: brand, the tools (each in its own colour) and the theme toggle.
+    With its 1 px hairline it is exactly `--head-h` tall, which pages use to tuck under it. */
 export function SiteHeader() {
   const tools = navTools();
   return (
@@ -18,7 +19,7 @@ export function SiteHeader() {
         background: 'color-mix(in srgb, var(--bg) 88%, transparent)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
       }}
     >
-      <Wrap component="nav" aria-label="Main" sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 'var(--head-h)' }}>
+      <Wrap component="nav" aria-label="Main" sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 'calc(var(--head-h) - 1px)' }}>
         <Box component={Link} to="/" sx={{ display: 'inline-flex', alignItems: 'center', gap: '10px', mr: 'auto', color: 'var(--ink)', textDecoration: 'none' }}>
           <Box component="span" aria-hidden="true" sx={{ display: 'inline-grid', placeItems: 'center', width: 30, height: 30, borderRadius: '8px', background: 'var(--ink)', color: 'var(--bg)', '& .ico': { width: 20, height: 20 } }}>
             <Icon name="mark" strokeWidth={1.9} />
@@ -32,16 +33,20 @@ export function SiteHeader() {
                 <Box
                   component={NavLink}
                   to={t.to}
+                  aria-label={t.label}
                   sx={{
                     display: 'inline-flex', alignItems: 'center', gap: 1, p: '7px 12px', borderRadius: '10px',
-                    fontSize: 14, fontWeight: 500, color: 'var(--ink-2)', textDecoration: 'none', transition: 'background-color .2s ease',
+                    fontSize: 14, fontWeight: 500, color: 'var(--ink-2)', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'background-color .2s ease',
                     '&:hover': { background: 'var(--surface)', color: 'var(--ink)' },
                     '&[aria-current="page"]': { background: 'var(--surface-2)', color: 'var(--ink)' },
                     '& .ico': { width: 17, height: 17, color: 'var(--tone)' },
+                    '& .nav-short': { display: 'none' },
+                    '@media (max-width: 760px)': { '& .nav-full': { display: 'none' }, '& .nav-short': { display: 'inline' } },
                   }}
                 >
                   <Icon name={t.pillar} />
-                  <span>{t.label}</span>
+                  <span className="nav-full">{t.label}</span>
+                  <span className="nav-short">{t.short}</span>
                 </Box>
               </li>
             ))}

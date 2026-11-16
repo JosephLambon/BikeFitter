@@ -5,26 +5,29 @@ import { renderApp } from './test/renderApp';
 
 describe('app routes and the exploreBike flag', () => {
   it('flag on: serves Explore the bike, links it from the nav, and sends the home page there', async () => {
-    const { router } = renderApp('/', { exploreBike: true, bikeBuild: false, bikeDrawer: false });
+    const { router } = renderApp('/', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false });
     expect(await screen.findByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/bike');
     const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Explore the bike' })).toHaveAttribute('aria-current', 'page');
+    const link = within(nav).getByRole('link', { name: 'Explore the bike' });
+    expect(link).toHaveAttribute('aria-current', 'page');
+    // Phones show the short label so the nav stays on one line; the link's name stays in full.
+    expect(within(link).getByText('Explore', { exact: true })).toHaveClass('nav-short');
   });
 
   it('flag off: the page does not exist and the nav does not offer it', () => {
-    renderApp('/bike', { exploreBike: false, bikeBuild: false, bikeDrawer: false });
+    renderApp('/bike', { exploreBike: false, bikeBuild: false, bikeDrawer: false, bikeCoil: false });
     expect(screen.getByRole('heading', { level: 1, name: 'Page not found.' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Explore the bike' })).not.toBeInTheDocument();
   });
 
   it('flag off: the home page stays a holding page', () => {
-    renderApp('/', { exploreBike: false, bikeBuild: false, bikeDrawer: false });
+    renderApp('/', { exploreBike: false, bikeBuild: false, bikeDrawer: false, bikeCoil: false });
     expect(screen.getByRole('heading', { level: 1, name: 'BikeFitter' })).toBeInTheDocument();
   });
 
   it('switches between light and dark from the header', async () => {
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false });
+    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false });
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
