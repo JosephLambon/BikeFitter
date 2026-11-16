@@ -53,12 +53,10 @@ jobs:
         # Runs Snyk Code (SAST) analysis and uploads result into GitHub.
         # Use || true to not fail the pipeline
       - name: Snyk Code test
-        if: false # TODO: temporarily skipped; re-enable once Snyk findings are triaged
         run: snyk code test --sarif > snyk-code.sarif # || true
 
         # Runs Snyk Open Source (SCA) analysis and uploads result to Snyk.
       - name: Snyk Open Source monitor
-        if: false # TODO: temporarily skipped; re-enable once Snyk findings are triaged
         run: snyk monitor --all-projects
 
         # Runs Snyk Infrastructure as Code (IaC) analysis and uploads result to Snyk.
@@ -78,7 +76,6 @@ jobs:
 
         # Push the Snyk Code results into GitHub Code Scanning tab
       - name: Upload result to GitHub Code Scanning
-        if: false # TODO: temporarily skipped; re-enable once Snyk findings are triaged
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-code.sarif
