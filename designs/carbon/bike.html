@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore the bike · BikeFitter</title>
+<meta name="description" content="Take a road bike apart, part by part. Select any part to see what it does, how it works and whether it affects your fit.">
+<script>try{if(localStorage.getItem('bikefitter-carbon-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+<link rel="stylesheet" href="../shared/bike.css">
+<link rel="stylesheet" href="carbon.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<nav class="nav" aria-label="Main">
+  <div class="wrap nav-row">
+    <a class="brand" href="index.html">BikeFitter</a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="learn.html">Learn</a></li>
+      <li><a href="fit.html">Check your fit</a></li>
+      <li><a href="bike.html" aria-current="page">Explore the bike</a></li>
+    </ul>
+    <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch to light mode">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5v2.2M10 16.3v2.2M1.5 10h2.2M16.3 10h2.2M4 4l1.6 1.6M14.4 14.4 16 16M4 16l1.6-1.6M14.4 5.6 16 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.6A7 7 0 0 1 7.4 3.5a7 7 0 1 0 9.1 9.1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path class="bar-1" d="M3 6h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="bar-2" d="M3 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+  <!-- Scrolling through the reel takes the bike apart. The button and slider do the same
+       thing in place, without moving the page; whichever you used last is in control. -->
+  <section class="reel" id="reel" aria-labelledby="bike-h">
+    <div class="stage">
+      <div class="heads">
+        <div class="head" id="head-1">
+          <p class="eyebrow">Explore the bike</p>
+          <h1 class="display" id="bike-h">What every part of a road bike&nbsp;does.</h1>
+          <p class="sub"><span class="only-motion">Scroll down, or press Take it apart, to see how a road bike fits together.</span><span class="only-still">Press Take it apart, or use the slider, to see how a road bike fits together.</span> Then select any part to find out what it does.</p>
+        </div>
+        <div class="head head-2" id="head-2" aria-hidden="true">
+          <p class="eyebrow">Explore the bike</p>
+          <p class="display h">Select any part.</p>
+          <p class="sub">Hover over it or tap it. You can also press Tab, then use the arrow keys. Parts that affect your fit say why.</p>
+        </div>
+      </div>
+      <div class="stage-bike" id="stage-bike"></div>
+      <div class="stage-foot">
+        <button class="btn btn-quiet" type="button" id="explode-btn">Take it apart</button>
+        <div class="range">
+          <span aria-hidden="true">Together</span>
+          <input type="range" id="explode" min="0" max="100" value="0" aria-label="How far apart the bike is">
+          <span aria-hidden="true">Apart</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="about-h">
+    <div class="wrap">
+      <h2 class="display" id="about-h">What you’re looking at.</h2>
+      <p class="lead">A modern road bike with disc brakes, drawn from the drive side: the side with the chain. Its proportions come from a real mid-size endurance frame.</p>
+      <ul class="bike-facts">
+        <li><h3>Seven systems</h3><p>Frame, fork, cockpit, contact points, drivetrain, brakes and wheels, plus a bottle cage.</p></li>
+        <li><h3>Three contact points</h3><p>You touch the bike at the saddle, the handlebar and the pedals. These are where fit is set.</p></li>
+        <li><h3>UK names</h3><p>Parts use UK terms, such as chainset and rear mech. The glossary will list the US names too.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section tight" aria-labelledby="next-h">
+    <div class="wrap">
+      <div class="next">
+        <h2 class="display" id="next-h">Now check your own bike.</h2>
+        <p class="lead">Measure yourself and your bike, and get a starting point for each adjustment.</p>
+        <div class="ctas"><a class="btn" href="fit.html">Check your fit</a><a class="more" href="learn.html">Learn the basics ›</a></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>BikeFitter gives starting points, not prescriptions. It isn’t medical advice: if you have pain, numbness or an injury, see a qualified bike fitter, a physiotherapist or your GP.</p>
+    <nav class="foot-nav" aria-label="Footer"><a href="index.html">Home</a><a href="learn.html">Learn</a><a href="fit.html">Check your fit</a><a href="bike.html">Explore the bike</a><a href="../index.html">All design directions</a></nav>
+    <p>Design preview: Carbon. Last content review 6 November 2026.</p>
+  </div>
+</footer>
+
+<script src="carbon.js"></script>
+<script src="../shared/bike.js"></script>
+<script>
+(function () {
+  var reel = document.getElementById('reel'), slider = document.getElementById('explode'), btn = document.getElementById('explode-btn');
+  var h1 = document.getElementById('head-1'), h2 = document.getElementById('head-2');
+  var api = BikeExplorer.mount(document.getElementById('stage-bike'), { lessonHref: 'learn.html' });
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var progress = 0, follow = true, lastM = 0, anim = null;
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+
+  // Where scrolling alone would put the bike (0 = together, 1 = apart).
+  function mapped() {
+    var travel = reel.offsetHeight - window.innerHeight;
+    if (travel <= 0) return progress;
+    var p = clamp((window.scrollY - reel.offsetTop) / travel);
+    return clamp((p - 0.1) / 0.7);
+  }
+
+  function set(e) {
+    progress = clamp(e);
+    api.setProgress(progress);
+    slider.value = Math.round(progress * 100);
+    slider.setAttribute('aria-valuetext', progress < 0.01 ? 'Together' : progress > 0.99 ? 'Fully apart' : Math.round(progress * 100) + '% apart');
+    btn.textContent = progress > 0.5 ? 'Put it back together' : 'Take it apart';
+    var t = reduce.matches ? 0 : clamp((progress - 0.02) / 0.18);
+    h1.style.opacity = 1 - t; h1.style.transform = 'translateY(' + (-16 * t) + 'px)';
+    h2.style.opacity = t; h2.style.transform = 'translateY(' + (16 * (1 - t)) + 'px)';
+  }
+
+  // Manual control: the button and slider take over without scrolling the page.
+  // Scrolling picks control back up only once it "catches" the bike's current state,
+  // so the drawing never jumps.
+  function takeOver() { follow = false; lastM = mapped(); }
+  function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+  function animateTo(target) {
+    stopAnim(); takeOver();
+    if (reduce.matches) { set(target); return; }
+    var from = progress, start = null, dur = 300 + 1100 * Math.abs(target - from);
+    function step(ts) {
+      if (start === null) start = ts;
+      var k = clamp((ts - start) / dur);
+      set(from + (target - from) * k);
+      anim = k < 1 ? requestAnimationFrame(step) : null;
+    }
+    anim = requestAnimationFrame(step);
+  }
+  btn.addEventListener('click', function () { animateTo(progress > 0.5 ? 0 : 1); });
+  slider.addEventListener('input', function () { stopAnim(); takeOver(); set(slider.value / 100); });
+
+  function onScroll() {
+    if (reduce.matches) return;
+    var m = mapped();
+    if (!follow && !anim && (m - progress) * (lastM - progress) <= 0) follow = true;
+    lastM = m;
+    if (follow) set(m);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  set(0);
+  onScroll();
+})();
+</script>
+</body>
+</html>

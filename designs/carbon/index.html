@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BikeFitter: make your road bike fit you</title>
+<meta name="description" content="A guide to road bike fit. Learn what a good fit looks like, check your own bike at home, and find out what to change first, with every number explained and sourced.">
+<script>try{if(localStorage.getItem('bikefitter-carbon-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+<link rel="stylesheet" href="../shared/bike.css">
+<link rel="stylesheet" href="carbon.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<nav class="nav" aria-label="Main">
+  <div class="wrap nav-row">
+    <a class="brand" href="index.html" aria-current="page">BikeFitter</a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="learn.html">Learn</a></li>
+      <li><a href="fit.html">Check your fit</a></li>
+      <li><a href="bike.html">Explore the bike</a></li>
+    </ul>
+    <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch to light mode">
+      <svg class="icon-sun" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.5v2.2M10 16.3v2.2M1.5 10h2.2M16.3 10h2.2M4 4l1.6 1.6M14.4 14.4 16 16M4 16l1.6-1.6M14.4 5.6 16 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg class="icon-moon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.6A7 7 0 0 1 7.4 3.5a7 7 0 1 0 9.1 9.1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path class="bar-1" d="M3 6h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="bar-2" d="M3 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+  <section class="hero" aria-labelledby="hero-h">
+    <div class="wrap">
+      <p class="eyebrow">A guide to road bike fit</p>
+      <h1 class="display" id="hero-h">Make your bike fit&nbsp;you.</h1>
+      <p class="sub">Learn what a good fit looks like, check your own bike at home, and find out what to change first. Every number is explained and sourced.</p>
+      <div class="ctas"><a class="btn" href="fit.html">Check your fit</a><a class="more" href="learn.html">Learn the basics ›</a></div>
+    </div>
+    <figure class="hero-bike">
+      <div id="hero-bike"></div>
+      <figcaption>Saddle height, stack and reach: three of the measurements BikeFitter helps you understand.</figcaption>
+    </figure>
+  </section>
+
+  <section class="section" aria-labelledby="who-h">
+    <div class="wrap">
+      <h2 class="eyebrow" id="who-h">Who it’s for</h2>
+      <p class="statement">You ride a road bike, and something doesn’t feel quite right. <strong>But what does a good fit look like? How do you measure one? What should you change first, and by how much?</strong> BikeFitter answers those questions in plain English.</p>
+    </div>
+  </section>
+
+  <section class="section tight" aria-labelledby="tools-h">
+    <div class="wrap">
+      <h2 class="display" id="tools-h">Three ways to use BikeFitter.</h2>
+      <p class="lead">Start wherever suits you. Each one links to the others when you need it.</p>
+      <ul class="tools">
+        <li class="tool">
+          <p class="eyebrow">Learn</p>
+          <h3>Understand how bike fit works.</h3>
+          <p>Short lessons in three levels, from the basics you can check at home to how a professional fitter works.</p>
+          <a class="go" href="learn.html">Browse the lessons ›</a>
+          <div class="tool-visual" aria-hidden="true">
+            <ol class="mini-levels">
+              <li><span>1</span>Fundamentals<small>10 lessons</small></li>
+              <li><span>2</span>Intermediate<small>10 lessons</small></li>
+              <li><span>3</span>Professional<small>11 lessons</small></li>
+            </ol>
+          </div>
+        </li>
+        <li class="tool">
+          <p class="eyebrow">Check your fit</p>
+          <h3>Get a starting position for your bike.</h3>
+          <p>Answer simple questions, one at a time. Each suggestion comes with the reason, how to test it and where the advice comes from.</p>
+          <a class="go" href="fit.html">Start your fit check ›</a>
+          <div class="tool-visual" aria-hidden="true">
+            <ol class="flow">
+              <li>About you<small>Your riding and any discomfort</small></li>
+              <li>Your body<small>Height, inside leg and flexibility</small></li>
+              <li>Your bike<small>Optional: how it’s set up now</small></li>
+              <li>Your starting points<small>Explained, with sources</small></li>
+            </ol>
+          </div>
+        </li>
+        <li class="tool wide">
+          <div>
+            <p class="eyebrow">Explore the bike</p>
+            <h3>See what every part does.</h3>
+            <p>Take a road bike apart on screen. Select any part to find out what it’s for, and whether it affects your fit.</p>
+            <a class="go" href="bike.html">Explore the bike ›</a>
+          </div>
+          <div class="tool-visual" id="tile-bike" aria-hidden="true"></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="trust-h">
+    <div class="wrap">
+      <h2 class="display" id="trust-h">Every number has a source.</h2>
+      <p class="lead">There’s a lot of conflicting fit advice online. <strong>We only publish what we can trace to published research or experienced professional fitters,</strong> and we label which is which.</p>
+      <ul class="labels">
+        <li><span class="badge">Research</span><h3>Tested in studies</h3><p>Findings from peer-reviewed research, with a link to the paper.</p></li>
+        <li><span class="badge">Expert practice</span><h3>How fitters work</h3><p>Methods used by experienced professional fitters, credited by name.</p></li>
+        <li><span class="badge">Rule of thumb</span><h3>A rough starting point</h3><p>Common shortcuts. Useful for getting close, but not proven to be right for you.</p></li>
+      </ul>
+      <p class="note"><strong>Starting points, not prescriptions.</strong> BikeFitter doesn’t replace a professional bike fit or medical advice. If you have pain, numbness or an injury, see a qualified bike fitter, a physiotherapist or your GP.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>BikeFitter gives starting points, not prescriptions. It isn’t medical advice: if you have pain, numbness or an injury, see a qualified bike fitter, a physiotherapist or your GP.</p>
+    <nav class="foot-nav" aria-label="Footer"><a href="index.html">Home</a><a href="learn.html">Learn</a><a href="fit.html">Check your fit</a><a href="bike.html">Explore the bike</a><a href="../index.html">All design directions</a></nav>
+    <p>Design preview: Carbon. Last content review 6 November 2026.</p>
+  </div>
+</footer>
+
+<script src="carbon.js"></script>
+<script src="../shared/bike.js"></script>
+<script>
+(function () {
+  // Hero: the assembled bike with the three key measurements labelled (no values, so they don't read as advice).
+  BikeExplorer.mount(document.getElementById('hero-bike'), { interactive: false, dims: true, dimValues: false });
+
+  // Explore tile: the bike comes apart as the tile scrolls up the screen. Decoration only:
+  // nothing is pinned, and the full, interactive version lives on the Explore page.
+  var tile = document.getElementById('tile-bike');
+  var mini = BikeExplorer.mount(tile, { interactive: false });
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)'), ticking = false;
+  function clamp(v) { return Math.max(0, Math.min(1, v)); }
+  function update() {
+    ticking = false;
+    if (reduce.matches) { mini.setProgress(0.7); return; }
+    var r = tile.getBoundingClientRect(), vh = window.innerHeight;
+    var t = clamp((vh - r.top) / (vh + r.height));
+    mini.setProgress(clamp((t - 0.2) / 0.45) * 0.8);
+  }
+  function request() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+  window.addEventListener('scroll', request, { passive: true });
+  window.addEventListener('resize', request);
+  update();
+})();
+</script>
+</body>
+</html>
