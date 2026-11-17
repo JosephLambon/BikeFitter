@@ -96,7 +96,7 @@ export function BuildTray({ build, onChange, open, id, fit = false, beside = fal
                   // Shelf card: --surface, 14 px radius, equal padding on every side.
                   display: 'grid', gap: '8px', p: '12px', borderRadius: '14px', background: 'var(--surface)',
                   // A tight slot: denser cards, so more options show before it scrolls.
-                  ...(fit && { '&&': { gap: '4px', p: beside ? '4px 4px 4px 8px' : '8px 4px 4px', borderRadius: '10px', ...(beside && { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center' }) } }),
+                  ...(fit && { '&&': { gap: beside ? '8px' : '4px', p: beside ? '4px 4px 4px 8px' : '8px 4px 4px', borderRadius: '10px', ...(beside && { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center' }) } }),
                 }}
               >
                 <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', ...(fit && { '&&': { pl: '6px' } }) }}>
