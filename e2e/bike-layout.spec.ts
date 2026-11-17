@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectScrubberAligned } from './scrubber.js';
+import { eachPart, takeApart, viewBox } from './bike.js';
 
-/* Regressions for the exploded layout, the info-card rule, the build swaps, zoom and the phone
+/* Regressions for the exploded layout, the part label, the build swaps, zoom and the phone
    layouts (AGENTS.md §5.1). */
 
 /** Every point on the stage where two different pieces are drawn on top of each other. Parts in
@@ -28,12 +29,6 @@ function overlaps(page: Page) {
   });
 }
 
-async function takeApart(page: Page) {
-  await page.getByRole('button', { name: 'Take the bike apart' }).click();
-  await expect(page.getByRole('slider', { name: 'How far apart the bike is' })).toHaveAttribute('aria-valuetext', 'Fully apart');
-  await page.waitForTimeout(250);
-}
-
 test.describe('Exploded layout', () => {
   test('no two parts overlap when the bike is fully apart', async ({ page }) => {
     await page.goto('/bike');
@@ -54,107 +49,95 @@ test.describe('Exploded layout', () => {
   });
 });
 
-/** Selects each part in turn from the keyboard and calls `check` with its key. */
-async function eachPart(page: Page, check: (key: string) => Promise<void>) {
-  const n = await page.locator('.bx-part[role="button"]').count();
-  await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
-  const seen = new Set<string>();
-  for (let i = 0; i < n; i++) {
-    if (i) await page.keyboard.press('ArrowRight');
-    const key = await page.evaluate(() => document.activeElement!.getAttribute('data-part')!);
-    await expect(page.locator(`.bx-part.is-active[data-part="${key}"]`).first()).toBeAttached();
-    seen.add(key);
-    await check(key);
-  }
-  expect(seen.size).toBe(n); // every part was checked
-}
+test.describe('Part label (bikeLabel on)', () => {
+  /** Waits for the window to finish fading in. */
+  const settled = (page: Page) => page.getByTestId('part-label-window').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  /** The label window's box, its text, and every drawn part its band overlaps. */
+  const read = (page: Page) => page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('[data-testid="part-label-window"]')!;
+    const band = document.querySelector<HTMLElement>('[data-testid="part-label"]')!.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const hits = new Set<string>();
+    for (const g of document.querySelectorAll<SVGGElement>('.bx-part:not(.is-leaving)')) {
+      const b = g.getBoundingClientRect();
+      if (b.width && band.left < b.right && band.right > b.left && band.top < b.bottom && band.bottom > b.top) hits.add(g.dataset.part!);
+    }
+    return { box: [r.left, r.top, r.width, r.height].map(Math.round).join(' '), text: el.textContent!, hits: [...hits], align: getComputedStyle(el).textAlign };
+  });
 
-/** Is every copy of the part (one per fragment: a tyre on each wheel) under the card? */
-const cardHidesPart = (page: Page, key: string) => page.evaluate((k) => {
-  const card = document.querySelector('.bx-card')!.getBoundingClientRect();
-  const byFrag = new Map<string, boolean>();
-  for (const g of document.querySelectorAll<SVGGElement>(`.bx-part[data-part="${k}"]`)) {
-    const r = g.getBoundingClientRect();
-    const hit = card.left < r.right && card.right > r.left && card.top < r.bottom && card.bottom > r.top;
-    byFrag.set(g.dataset.frag!, (byFrag.get(g.dataset.frag!) ?? false) || hit);
-  }
-  return [...byFrag.values()].every(Boolean);
-}, key);
+  test('is a white window with a 1 px Bike-amber hairline, in light and dark', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('/bike');
+      await page.getByRole('button', { name: 'Saddle, Contact points' }).click();
+      const look = await page.getByTestId('part-label-window').evaluate((el) => {
+        const root = getComputedStyle(document.documentElement), s = getComputedStyle(el);
+        const probe = document.createElement('i');
+        document.body.append(probe);
+        probe.style.color = root.getPropertyValue('--bike'); const bike = getComputedStyle(probe).color;
+        probe.style.color = root.getPropertyValue('--bg'); const bg = getComputedStyle(probe).color;
+        probe.remove();
+        return { fill: s.backgroundColor, bg, edge: s.boxShadow.startsWith(bike + ' 0px 0px 0px 1px inset') };
+      });
+      expect(look.fill, scheme).toBe(look.bg);
+      expect(look.edge, `${scheme}: amber hairline`).toBe(true);
+    }
+  });
 
-const viewBox = (page: Page) => page.locator('.bx-svg').getAttribute('viewBox');
-
-test.describe('Info card rule', () => {
-  /** Returns the parts the card hid completely. */
-  async function hiddenParts(page: Page) {
-    const hidden: string[] = [];
-    await eachPart(page, async (key) => {
-      await page.waitForTimeout(60); // the card is placed after selection
-      if (await cardHidesPart(page, key)) hidden.push(key);
-    });
-    return hidden;
-  }
-
-  for (const [w, h] of [[1280, 800], [1440, 900], [1920, 1080]]) {
-    test(`never hides the selected part when the bike is together (${w}×${h})`, async ({ page }) => {
+  for (const [w, h] of [[820, 900], [1280, 800], [1920, 1080]]) {
+    test(`stays in one place above the bike, names every part there and never covers the drawing (${w}×${h})`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await page.goto('/bike');
-      expect(await hiddenParts(page)).toEqual([]);
+      await expect(page.locator('.bx-card')).toHaveCount(0);
+      await expect(page.getByTestId('part-label-window')).toBeHidden();
+      await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
+      await expect(page.getByTestId('part-label-window')).toBeVisible();
+      await settled(page);
+      const first = await read(page);
+      const vb = await viewBox(page);
+      await eachPart(page, async (key) => {
+        const name = await page.locator(`.bx-part[data-part="${key}"][role="button"]`).getAttribute('aria-label');
+        await expect(page.getByTestId('part-label')).toContainText(name!.split(',')[0]);
+        const now = await read(page);
+        expect(now.box).toBe(first.box);
+        expect(now.hits).toEqual([]);
+        expect(now.align).toBe('center');
+        expect(await viewBox(page)).toBe(vb);
+      });
+      const box = (await page.getByTestId('part-label').boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(w);
     });
   }
 
-  test('never hides the selected part when the bike is apart', async ({ page }) => {
+  test('never covers the drawing when the bike is apart', async ({ page }) => {
     await page.goto('/bike');
     await takeApart(page);
-    expect(await hiddenParts(page)).toEqual([]);
+    await eachPart(page, async () => { expect((await read(page)).hits).toEqual([]); });
   });
 
-  test('selecting a part never zooms or moves the drawing', async ({ page }) => {
+  test('the window shows only while a part is hovered or picked, and hovering changes only the words', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/bike');
-    const before = await viewBox(page);
-    await eachPart(page, async () => {
-      await page.waitForTimeout(40);
-      expect(await viewBox(page)).toBe(before);
-    });
-    await page.waitForTimeout(500);
-    expect(await viewBox(page)).toBe(before);
+    const win = page.getByTestId('part-label-window');
+    await expect(win).toBeHidden();
+    await page.locator('.bx-part[data-part="saddle"]').first().hover();
+    await expect(win).toBeVisible();
+    await settled(page);
+    const before = await read(page);
+    await expect(page.getByTestId('part-label')).toContainText('Saddle');
+    await expect(page.getByTestId('part-label')).toContainText('Where you sit');
+    await page.locator('.bx-part[data-part="fork"]').first().hover();
+    await expect(page.getByTestId('part-label')).toContainText('Fork');
+    expect((await read(page)).box).toBe(before.box);
+    await page.mouse.move(2, 2);
+    await expect(win).toBeHidden();
+    await page.locator('.bx-part[data-part="saddle"]').first().click();
+    await page.mouse.move(2, 2);
+    await expect(win).toBeVisible();
+    await expect(win).toContainText('Saddle');
   });
-
-  // Between phone and desktop widths the card once docked into nothing and vanished.
-  for (const w of [600, 640, 680, 720, 761, 780, 800, 840]) {
-    test(`the card is on screen and readable at ${w} px`, async ({ page }) => {
-      await page.setViewportSize({ width: w, height: 900 });
-      await page.goto('/bike');
-      await page.getByRole('button', { name: 'Saddle, Contact points' }).focus();
-      const card = page.getByRole('status');
-      await expect(card).toContainText('Where you sit');
-      await card.evaluate((el) => Promise.all(el.getAnimations().map((x) => x.finished))); // the card rises into place
-      const c = (await card.boundingBox())!;
-      expect(c.width).toBeGreaterThan(240);
-      expect(c.height).toBeGreaterThan(120);
-      expect(c.x).toBeGreaterThanOrEqual(0);
-      expect(c.x + c.width).toBeLessThanOrEqual(w);
-      // The card, or (on phones) the drawer it scrolls in, is wholly on screen.
-      const drawer = page.getByTestId('drawer');
-      const box = (await drawer.count()) ? (await drawer.boundingBox())! : c;
-      expect(box.y + box.height).toBeLessThanOrEqual(900);
-      // Nothing clips it: every ancestor that clips its overflow contains the whole card.
-      const clipped = await card.evaluate((el) => {
-        const r = el.getBoundingClientRect(), out: string[] = [];
-        for (let a = el.parentElement; a; a = a.parentElement) {
-          const cs = getComputedStyle(a);
-          if (cs.display === 'none' || cs.visibility === 'hidden') out.push('hidden ' + a.className);
-          if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
-          // In the phone drawer the card scrolls inside the drawer's own scroll box, by design.
-          if (a.dataset.testid === 'card-slot' && cs.overflowY === 'auto') break;
-          const b = a.getBoundingClientRect();
-          if (r.left < b.left - 1 || r.right > b.right + 1 || r.top < b.top - 1 || r.bottom > b.bottom + 1) out.push(a.className);
-        }
-        return out;
-      });
-      expect(clipped).toEqual([]);
-    });
-  }
 });
 
 test.describe('Build swaps', () => {
@@ -322,17 +305,6 @@ test.describe('Phone, portrait', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 
   const viewBoxWidth = (page: Page) => page.locator('.bx-svg').evaluate((s) => +s.getAttribute('viewBox')!.split(' ')[2]);
-  /** A thumb swipe on the drawer's grab handle: negative dy is up. */
-  const swipeTab = async (page: Page, dy: number) => {
-    const cdp = await page.context().newCDPSession(page);
-    const t = (await page.getByTestId('drawer-tab').boundingBox())!;
-    const x = t.x + t.width / 2, y = t.y + 10;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
-    for (let k = 1; k <= 5; k++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (dy * k) / 5, id: 1 }] });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await cdp.detach();
-  };
-  const drawerHeight = async (page: Page) => (await page.getByTestId('drawer').boundingBox())!.height;
   const noScroll = (page: Page) => page.evaluate(() => {
     const st = document.querySelector('[data-testid="stage"]') as HTMLElement;
     return {
@@ -342,34 +314,109 @@ test.describe('Phone, portrait', () => {
     };
   });
 
-  test('title on white, then the bench wall with the bike near the top, the drawer tab, and the dock along the bottom', async ({ page }) => {
+  const box = async (page: Page, id: string) => (await page.getByTestId(id).boundingBox())!;
+
+  for (const [w, h] of [[390, 844], [375, 667]] as const) {
+    test(`title, then the bike centred between it and the label's space, then the dock (${w}×${h})`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto('/bike');
+      await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
+      await expect(page.getByTestId('drawer')).toHaveCount(0);
+      const title = (await page.locator('#bike-h').boundingBox())!;
+      const wall = await box(page, 'wall'), stage = await box(page, 'stage'), slot = await box(page, 'label-slot'), dock = await box(page, 'dock');
+      expect(title.y + title.height).toBeLessThanOrEqual(wall.y);
+      expect(stage.height / stage.width).toBeCloseTo(0.75, 1);
+      // Equal space above and below what you see: the top of the bike and the bottom of the bench.
+      const drawn = await page.evaluate(() => {
+        let top = Infinity, bottom = -Infinity;
+        for (const el of document.querySelectorAll('.bx-part, .bx-bench')) {
+          const r = el.getBoundingClientRect();
+          if (r.height) { top = Math.min(top, r.top); bottom = Math.max(bottom, r.bottom); }
+        }
+        return { top, bottom };
+      });
+      const above = drawn.top - wall.y, below = slot.y - drawn.bottom;
+      expect(Math.abs(above - below), `above ${above}, below ${below}`).toBeLessThanOrEqual(2);
+      expect(above).toBeGreaterThan(16);
+      expect(stage.y).toBeGreaterThanOrEqual(wall.y);
+      expect(stage.y + stage.height).toBeLessThanOrEqual(slot.y);
+      expect(Math.abs(slot.y + slot.height - dock.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(dock.y + dock.height - h)).toBeLessThanOrEqual(1);
+      await expect(page.getByTestId('part-hint')).toBeInViewport();
+      await expect(page.getByTestId('part-label-window')).toBeHidden();
+      await expect(page.getByTestId('scroll-cue')).toHaveCount(0);
+      expect(await noScroll(page)).toEqual({ pageX: true, stage: true, zoom: 1 });
+    });
+  }
+
+  test('picking a part shows its label just above the dock, without moving the bike; picking it again lets it go', async ({ page }) => {
     await page.goto('/bike');
-    await expect(page.locator('[data-layout="drawer"]')).toBeAttached();
-    const title = (await page.locator('#bike-h').boundingBox())!;
-    const stage = (await page.getByTestId('stage').boundingBox())!;
-    const dock = (await page.getByTestId('dock').boundingBox())!;
-    const slider = (await page.getByRole('slider', { name: 'How far apart the bike is' }).boundingBox())!;
-    expect(title.y + title.height).toBeLessThanOrEqual(stage.y);
-    expect(stage.height / stage.width).toBeCloseTo(0.75, 1); // in the bike's proportions, not the leftover height
-    const titleBg = await page.locator('#bike-h').evaluate((h) => getComputedStyle(h.parentElement!.parentElement!).backgroundColor);
-    expect(titleBg).toBe('rgb(255, 255, 255)');
-    expect(Math.abs(dock.y + dock.height - 844)).toBeLessThanOrEqual(1); // along the bottom of the screen
-    expect(slider.y).toBeGreaterThanOrEqual(dock.y);
-    // Open on load, on the guide, between the bike and the dock; no Show/Hide button.
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    await expect(page.getByTestId('drawer-idle')).toBeInViewport();
-    await expect(page.getByTestId('part-hint')).toContainText('Tap a part to learn more.');
-    await expect(page.getByTestId('drawer').getByText(/^(Show|Hide)$/)).toHaveCount(0);
-    await page.waitForTimeout(600);
-    const d = (await page.getByTestId('drawer').boundingBox())!;
-    expect(d.y).toBeGreaterThanOrEqual(stage.y + stage.height);
-    expect(d.y + d.height).toBeLessThanOrEqual(dock.y);
-    const guide = await page.getByTestId('drawer-idle').evaluate((g) => g.scrollHeight <= g.clientHeight);
-    expect(guide).toBe(true); // the whole guide fits, nothing scrolls
-    await expect(page.getByTestId('scroll-cue')).toHaveCount(0); // scroll does nothing on a phone
-    await expect(page.getByTestId('rotate-invite')).toHaveCount(0);
-    expect(await noScroll(page)).toEqual({ pageX: true, stage: true, zoom: 1 });
+    const stage = await box(page, 'stage'), dock = await box(page, 'dock');
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    const win = page.getByTestId('part-label-window');
+    await expect(win).toBeVisible();
+    await expect(win).toContainText('Saddle');
+    await win.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    const l = (await win.boundingBox())!;
+    expect(l.y).toBeGreaterThanOrEqual(stage.y + stage.height); // never over the drawing
+    expect(l.y + l.height).toBeLessThanOrEqual(dock.y);
+    expect(l.height).toBeCloseTo(104, 0);
+    expect(await win.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true); // nothing cut off
+    await expect(page.locator('.bx-card')).toHaveCount(0);
+    expect(await box(page, 'stage')).toEqual(stage);
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await expect(win).toBeHidden();
+    await expect(page.getByTestId('part-hint')).toBeInViewport();
+    expect(await box(page, 'stage')).toEqual(stage);
   });
+
+  test('on a small phone (320×568) everything still fits: the bike shrinks, the label and dock stay whole', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/bike');
+    const wall = await box(page, 'wall'), stage = await box(page, 'stage'), slot = await box(page, 'label-slot'), dock = await box(page, 'dock');
+    expect(stage.height / stage.width).toBeCloseTo(0.75, 1);
+    expect(stage.y).toBeGreaterThanOrEqual(wall.y + 8);
+    expect(slot.y).toBeGreaterThanOrEqual(stage.y + stage.height + 8);
+    expect(Math.abs(slot.y + slot.height - dock.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dock.y + dock.height - 568)).toBeLessThanOrEqual(1);
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await expect(page.getByTestId('part-label-window')).toBeInViewport({ ratio: 1 });
+  });
+
+  test('turning the phone lets go of a picked part, so the label never names a part that isn’t picked', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/bike');
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
+    await expect(page.getByTestId('part-label-window')).toBeHidden();
+    await expect(page.getByTestId('part-hint')).toBeInViewport();
+    await expect(page.locator('.bx-part.is-active')).toHaveCount(0);
+  });
+
+  for (const [label, changed] of [['the standard build', false], ['a fully changed build', true]] as const) {
+    test(`every part’s name and description fit the label on a small phone, with ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.goto('/bike');
+      if (changed) {
+        await page.getByRole('button', { name: /^Build/ }).click();
+        const tray = page.getByTestId('build-tray');
+        for (const [opt, pick] of [['Gears', 'Electronic'], ['Brakes', 'Rim'], ['Rims', 'Deep'], ['Chainrings', 'One (1×)'], ['Mudguards', 'On']]) {
+          await tray.getByRole('radiogroup', { name: opt }).getByRole('radio', { name: pick }).click();
+        }
+        await page.getByRole('button', { name: /^Build/ }).click();
+        await page.waitForTimeout(800);
+      }
+      const n = await page.locator('.bx-part[role="button"]').count();
+      await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
+      for (let k = 0; k < n; k++) {
+        const win = page.getByTestId('part-label-window');
+        const name = (await win.locator('h3').textContent())!;
+        expect(await win.evaluate((el) => el.scrollHeight <= el.clientHeight), name).toBe(true);
+        await page.keyboard.press('ArrowRight');
+      }
+    });
+  }
 
   test('in the dock, the grip sits on the coil’s end, level with it', async ({ page }) => {
     await page.goto('/bike');
@@ -426,7 +473,7 @@ test.describe('Phone, portrait', () => {
     await expect(page.locator('[data-layout="landscape"]')).toBeAttached();
     await expect(coil).toHaveAttribute('data-invite', 'off');
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator('[data-layout="drawer"]')).toBeAttached();
+    await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
     await expect(coil).toHaveAttribute('data-invite', 'off');
     expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
   });
@@ -465,88 +512,91 @@ test.describe('Phone, portrait', () => {
     await expect.poll(() => viewBoxWidth(page)).toBe(before);
   });
 
-  test('on a short phone the guide still fits the drawer, with nothing cut off', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/bike');
-    await page.waitForTimeout(600);
-    await expect(page.getByTestId('part-hint')).toBeInViewport();
-    expect(await page.getByTestId('drawer-idle').evaluate((g) => g.scrollHeight <= g.clientHeight)).toBe(true);
-    await expect(page.getByTestId('drawer-idle')).toContainText('Drag this panel down to hide it.');
-  });
+  /** Records the viewBox width on every frame for `ms`, from now. */
+  const recordWidths = (page: Page, ms: number) => page.evaluate((ms) => {
+    const w = window as unknown as { widths: [number, number][] };
+    w.widths = [];
+    const svg = document.querySelector('.bx-svg')!, t0 = performance.now();
+    const tick = () => {
+      w.widths.push([performance.now() - t0, +svg.getAttribute('viewBox')!.split(' ')[2]]);
+      if (performance.now() - t0 < ms) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, ms);
+  const recorded = (page: Page) => page.evaluate(() => (window as unknown as { widths: [number, number][] }).widths);
 
-  test('tapping a thin part opens the drawer between the bike and the dock; a swipe down leaves a tab', async ({ page }) => {
+  test('a double-tap zooms in with the same short glide as zooming out, keeping the tapped spot under the finger', async ({ page }) => {
     await page.goto('/bike');
-    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
-    const card = page.getByRole('status');
-    await expect(card).toContainText('Saddle');
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    await page.waitForTimeout(600); // the drawer and stage settle
-    // The card scrolls inside the drawer, which fits between the stage and the dock.
-    const d = (await page.getByTestId('drawer').boundingBox())!, stage = (await page.getByTestId('stage').boundingBox())!, dock = (await page.getByTestId('dock').boundingBox())!;
-    expect(d.y).toBeGreaterThanOrEqual(stage.y + stage.height); // never over the drawing
-    expect(d.y + d.height).toBeLessThanOrEqual(dock.y);
-    await expect(page.getByRole('button', { name: 'Take the bike apart' })).toBeInViewport();
-    await expect(page.getByTestId('rotate-invite')).toHaveCount(0);
-
-    const startY: number = await page.evaluate(() => window.scrollY);
-    await swipeTab(page, 80);
-    await expect(page.getByRole('button', { name: 'Show details: Saddle' })).toBeVisible();
-    await expect.poll(() => drawerHeight(page)).toBeLessThan(70);
-    expect(await page.evaluate(() => window.scrollY)).toBe(startY);
-  });
-
-  test('the tab moves only by the thumb: a tap on it does nothing', async ({ page }) => {
-    await page.goto('/bike');
-    await page.waitForTimeout(600);
-    await page.getByTestId('drawer-tab').tap();
     await page.waitForTimeout(300);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    await swipeTab(page, 80);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
-    await page.waitForTimeout(600);
-    await page.getByTestId('drawer-tab').tap();
-    await page.waitForTimeout(300);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
-  });
-
-  test('the bike never moves as the drawer opens and hides, and the drawing still zooms', async ({ page }) => {
-    await page.goto('/bike');
-    const before = await page.getByTestId('stage').boundingBox();
-    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
-    await page.waitForTimeout(600);
-    expect(await page.getByTestId('stage').boundingBox()).toEqual(before);
-    await swipeTab(page, 80);
-    await page.waitForTimeout(600);
-    expect(await page.getByTestId('stage').boundingBox()).toEqual(before);
     const b = (await page.locator('.bx-svg').boundingBox())!;
-    const whole = await viewBoxWidth(page);
-    await page.touchscreen.tap(b.x + 20, b.y + 20); await page.touchscreen.tap(b.x + 20, b.y + 20);
-    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(whole / 2);
+    const before = await viewBoxWidth(page);
+    const x = b.x + 30, y = b.y + 30; // empty bench wall, not a part
+    // The drawing's point under the finger, in drawing units.
+    const under = () => page.locator('.bx-svg').evaluate((svg: SVGSVGElement, [x, y]) => {
+      const p = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM()!.inverse());
+      return [p.x, p.y];
+    }, [x, y]);
+    const start = await under();
+    await recordWidths(page, 800);
+    await page.touchscreen.tap(x, y); await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(850);
+    const frames = await recorded(page);
+    const widths = frames.map(([, w]) => w);
+    const zoomedW = widths[widths.length - 1];
+    expect(zoomedW).toBeLessThan(before / 2);
+    const between = widths.filter((w) => w < before - 1 && w > zoomedW + 1);
+    expect(between.length, 'several frames in between: an animation, not a jump').toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < widths.length; i++) expect(widths[i]).toBeLessThanOrEqual(widths[i - 1]); // only ever zooms in
+    const first = frames.find(([, w]) => w < before - 1)!, last = frames.find(([, w]) => w <= zoomedW + 0.1)!;
+    expect(last[0] - first[0], 'snappy').toBeLessThan(400);
+    const end = await under();
+    expect(Math.hypot(end[0] - start[0], end[1] - start[1]), 'the tapped spot stays put').toBeLessThan(2);
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
+
+    // And back out the same way.
+    await recordWidths(page, 800);
+    await page.touchscreen.tap(x, y); await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(850);
+    const out = (await recorded(page)).map(([, w]) => w);
+    expect(out.filter((w) => w > zoomedW + 1 && w < before - 1).length).toBeGreaterThanOrEqual(3);
+    expect(out[out.length - 1]).toBe(before);
   });
 
-  test('a thumb swipe on the tab hides the drawer, and a swipe up opens it, without scrolling the page', async ({ page }) => {
+  test('a touch during the zoom-in glide leaves the drawing zoomed where it stopped, with Reset zoom and panning', async ({ page }) => {
     await page.goto('/bike');
-    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
-    await page.waitForTimeout(600); // the drawer settles before the thumb finds the tab
-    const startY: number = await page.evaluate(() => window.scrollY);
-    await swipeTab(page, 80);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
-    await page.waitForTimeout(600);
-    await swipeTab(page, -80);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    await expect(page.getByRole('status')).toBeInViewport();
-    expect(await page.evaluate(() => window.scrollY)).toBe(startY);
+    await page.waitForTimeout(300);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const before = await viewBoxWidth(page);
+    const x = b.x + 30, y = b.y + 30;
+    const cdp = await page.context().newCDPSession(page);
+    const tap = async () => {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await tap(); await tap();
+    await page.waitForTimeout(80); // part-way through the 240 ms glide
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x + 60, y: y + 60, id: 2 }] });
+    await page.waitForTimeout(400);
+    const w = await viewBoxWidth(page);
+    expect(w).toBeLessThan(before - 1); // it stopped part-way in
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
+    expect(await page.locator('.bx-svg').evaluate((s) => (s as SVGSVGElement).style.touchAction)).toBe('none');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   });
 
-  test('with nothing selected, a swipe down hides the guide and a swipe up brings it back', async ({ page }) => {
+  test('with reduced motion a double-tap zooms in at once', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/bike');
-    await page.waitForTimeout(600);
-    await swipeTab(page, 80);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
-    await expect.poll(() => drawerHeight(page)).toBeLessThan(70);
-    await swipeTab(page, -80);
-    await expect(page.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    await expect(page.getByTestId('drawer-body').getByTestId('part-hint')).toBeInViewport();
+    await page.waitForTimeout(300);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const before = await viewBoxWidth(page);
+    await recordWidths(page, 500);
+    await page.touchscreen.tap(b.x + 30, b.y + 30); await page.touchscreen.tap(b.x + 30, b.y + 30);
+    await page.waitForTimeout(550);
+    const widths = (await recorded(page)).map(([, w]) => w);
+    const zoomedW = widths[widths.length - 1];
+    expect(zoomedW).toBeLessThan(before / 2);
+    expect(widths.filter((w) => w < before - 1 && w > zoomedW + 1)).toEqual([]);
   });
 
   test('scrolling never takes the bike apart: only the button and slider do', async ({ page }) => {
@@ -589,58 +639,38 @@ test.describe('Phone, landscape', () => {
   });
 });
 
-test.describe('Phone, portrait: the build tray', () => {
+test.describe('Phone, portrait: the build tray with the label at the thumb', () => {
   test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
   const box = async (page: Page, id: string) => (await page.getByTestId(id).boundingBox())!;
 
-  // iPhone 14 in browser dev tools, iPhone 14 with Safari's bars, iPhone SE; each with and
-  // without reduced motion, which must not change a phone's screen.
-  for (const [w, h, reduced] of [[390, 844, false], [390, 664, false], [375, 667, false], [390, 844, true], [375, 667, true]] as const) {
-    test(`opens between the bike and the dock, never over the bike or the Part details tab, at ${w}×${h}${reduced ? ', reduced motion' : ''}`, async ({ page }) => {
+  for (const [w, h, reduced] of [[390, 844, false], [390, 664, false], [375, 667, false], [375, 667, true]] as const) {
+    test(`opens between the bike and the dock, never over the bike, and hides the label, at ${w}×${h}${reduced ? ', reduced motion' : ''}`, async ({ page }) => {
       if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.setViewportSize({ width: w, height: h });
       await page.goto('/bike');
       const stage = await box(page, 'stage'), dock = await box(page, 'dock');
-      // The page is one screen: the header, the bike, the drawer's space and the dock all fit.
       expect(dock.y + dock.height, 'the dock is on screen').toBeLessThanOrEqual(h);
-      expect(await page.evaluate(() => document.querySelector('#reel')!.getBoundingClientRect().bottom), 'the bench ends at the screen\'s edge').toBeLessThanOrEqual(h);
-      expect(stage.y, 'the bike sits below the header').toBeGreaterThanOrEqual((await page.locator('header').boundingBox())!.height);
+      await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+      await expect(page.getByTestId('part-label-window')).toBeVisible();
       await page.getByRole('button', { name: /^Build/ }).click();
       await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'true');
+      await expect(page.getByTestId('part-label-window')).toBeHidden();
       await page.waitForTimeout(600);
       const tray = await box(page, 'build-tray');
-      const stage2 = await box(page, 'stage'), dock2 = await box(page, 'dock');
-      expect(stage2, 'the bike never moves').toEqual(stage);
-      expect(dock2.height, 'the dock never grows').toBeCloseTo(dock.height, 0);
+      expect(await box(page, 'stage'), 'the bike never moves').toEqual(stage);
       expect(tray.y, 'tray starts below the bike').toBeGreaterThanOrEqual(stage.y + stage.height - 1);
-      if (h > 720) {
-        const tab = await box(page, 'drawer-tab');
-        expect(tray.y + tray.height, 'tray ends above the Part details tab').toBeLessThanOrEqual(tab.y + 1);
-        expect(tab.y + tab.height, 'the tab stays above the dock').toBeLessThanOrEqual(dock2.y + 1);
-        await expect(page.getByTestId('drawer-tab')).toBeInViewport({ ratio: 1 });
-      } else {
-        // Too short for both: the tab steps aside while the tray is open, and comes back after.
-        await expect(page.getByTestId('drawer-tab')).toBeHidden();
-        expect(tray.y + tray.height, 'tray ends above the dock').toBeLessThanOrEqual(dock2.y + 1);
-      }
-      // Room for at least two whole options before it scrolls.
+      expect(tray.y + tray.height, 'tray ends above the dock').toBeLessThanOrEqual((await box(page, 'dock')).y + 1);
       for (const name of ['Gears', 'Brakes']) {
         const r = (await page.getByTestId('build-tray').locator('[data-changed]').filter({ hasText: name }).boundingBox())!;
         expect(r.y + r.height, `${name} fits without scrolling`).toBeLessThanOrEqual(tray.y + tray.height + 1);
       }
-      // Nothing draws over the tray.
-      const onTop = await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('[data-testid="build-tray"]'), [tray.x + tray.width / 2, tray.y + Math.min(30, tray.height / 2)]);
-      expect(onTop, 'the tray is on top where it sits').toBe(true);
-      // Every option can be reached inside the tray, without the page scrolling.
       const last = page.getByTestId('build-tray').getByText('Mudguards');
       await last.scrollIntoViewIfNeeded();
       const l = (await last.boundingBox())!;
-      expect(l.y).toBeGreaterThanOrEqual(tray.y - 1);
       expect(l.y + l.height).toBeLessThanOrEqual(tray.y + tray.height + 1);
       expect(await page.evaluate(() => scrollY)).toBe(0);
-      expect(await box(page, 'stage')).toEqual(stage);
       await page.getByRole('button', { name: /^Build/ }).click();
-      await expect(page.getByTestId('drawer-tab')).toBeInViewport({ ratio: 1 });
+      await expect(page.getByTestId('part-label-window')).toBeVisible();
     });
   }
 });

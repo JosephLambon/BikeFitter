@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExplodedBike } from './ExplodedBike';
+import { ExplodedBike, PartLabel } from './ExplodedBike';
 import { DEFAULT_BUILD } from './build';
 import { partsFor } from './parts';
 
@@ -67,6 +67,68 @@ describe('ExplodedBike', () => {
     expect(card()).toHaveTextContent('Fork');
     fireEvent.pointerLeave(part('Fork').closest('svg')!, { pointerType: 'mouse' });
     expect(card()).toBeEmptyDOMElement();
+  });
+
+  it('the part label puts fresh words in its live region each time a part is picked, even the same part again', () => {
+    const { rerender } = render(<PartLabel partKey="saddle" />);
+    const first = screen.getByRole('heading', { name: 'Saddle' });
+    rerender(<PartLabel partKey={null} />);
+    rerender(<PartLabel partKey="saddle" />);
+    const again = screen.getByRole('heading', { name: 'Saddle' });
+    expect(again).not.toBe(first); // new nodes, so screen readers announce it again
+    rerender(<PartLabel partKey="saddle" />);
+    expect(screen.getByRole('heading', { name: 'Saddle' })).toBe(again); // but not on every render
+  });
+
+  describe('with the part label', () => {
+    const label = () => screen.getByTestId('part-label');
+    const win = () => screen.getByTestId('part-label-window');
+    it('names the selected part in a window above the drawing, with only its name and what it is, and floats no card', async () => {
+      const { container } = render(<ExplodedBike progress={0} label />);
+      expect(win()).toHaveAttribute('data-shown', 'false');
+      expect(win()).toHaveAttribute('aria-hidden', 'true');
+      expect(win()).toBeEmptyDOMElement();
+      expect(label().compareDocumentPosition(container.querySelector('.bx-stage')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      await userEvent.click(part('Pedals'));
+      expect(label()).toHaveAttribute('role', 'status');
+      expect(win()).toHaveAttribute('data-shown', 'true');
+      expect(win()).not.toHaveAttribute('aria-hidden');
+      expect(within(label()).getByRole('heading', { name: 'Pedals' })).toBeInTheDocument();
+      expect(label()).toHaveTextContent('Clipless road pedals that lock onto cleats on your shoes.');
+      expect(label()).not.toHaveTextContent(/Contact points|10 mm behind/);
+      expect(container.querySelector('.bx-card')).toBeNull();
+    });
+
+    it('swaps the words on hover, and hides the window when the pointer leaves, keeping its words while it fades', () => {
+      render(<ExplodedBike progress={0} label />);
+      fireEvent.pointerOver(part('Fork'), { pointerType: 'mouse' });
+      expect(label()).toHaveTextContent('Fork');
+      fireEvent.pointerOver(part('Saddle'), { pointerType: 'mouse' });
+      expect(label()).toHaveTextContent('SaddleWhere you sit');
+      fireEvent.pointerLeave(part('Saddle').closest('svg')!, { pointerType: 'mouse' });
+      expect(win()).toHaveAttribute('data-shown', 'false');
+      expect(win()).toHaveAttribute('aria-hidden', 'true');
+      expect(win()).toHaveTextContent('Saddle');
+    });
+
+    it('stays shown after a click when the pointer leaves, until the part is clicked again', async () => {
+      render(<ExplodedBike progress={0} label />);
+      await userEvent.click(part('Stem'));
+      fireEvent.pointerLeave(part('Stem').closest('svg')!, { pointerType: 'mouse' });
+      expect(win()).toHaveAttribute('data-shown', 'true');
+      await userEvent.click(part('Stem'));
+      expect(win()).toHaveAttribute('data-shown', 'false');
+    });
+
+    it('docks the full card instead when there is a card host (phones)', async () => {
+      const host = document.createElement('div');
+      document.body.append(host);
+      render(<ExplodedBike progress={0} label cardHost={host} />);
+      expect(screen.queryByTestId('part-label')).not.toBeInTheDocument();
+      await userEvent.click(part('Pedals'));
+      expect(within(host).getByText('Contact points')).toBeInTheDocument();
+      host.remove();
+    });
   });
 
   it('moves parts apart along their own vectors as progress rises', () => {

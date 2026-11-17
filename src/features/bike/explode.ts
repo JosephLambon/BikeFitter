@@ -99,6 +99,16 @@ export function reelProgress(scrollY: number, reelTop: number, reelHeight: numbe
   return clamp((clamp((scrollY - reelTop) / travel) - 0.1) / 0.7);
 }
 
+/** How far the opening heading has tucked away (0..1) on larger screens, so the bench wall can
+    grow into its space. It waits until the reel is 55% through (the bike mostly apart), then eases
+    out over the next 30%, scroll-linked so it moves exactly with the page. */
+export function tuckProgress(scrollY: number, reelTop: number, reelHeight: number, viewport: number) {
+  const travel = reelHeight - viewport;
+  if (travel <= 0) return 0;
+  const k = clamp((clamp((scrollY - reelTop) / travel) - 0.55) / 0.3);
+  return k * k * (3 - 2 * k);
+}
+
 /** After the button or slider takes over, scroll takes control back only once it reaches or
     crosses the bike's current state, so the drawing never jumps. */
 export const caughtUp = (mapped: number, lastMapped: number, progress: number) =>

@@ -194,3 +194,7 @@ const WORKTOP = 44;
 export const BENCH_BOTTOM = -GROUND + WORKTOP + 40;
 export const benchMarkup = '<rect class="bx-bench-front" x="-6000" y="' + (-GROUND + WORKTOP) + '" width="12000" height="6000"/>' +
   '<rect class="bx-bench-top" x="-6000" y="' + (-GROUND) + '" width="12000" height="' + WORKTOP + '"/>';
+/** The bench as a shelf: the same worktop, with a front that ends at BENCH_BOTTOM instead of running
+    off the stage, for a drawing centred in its stage (ExplodedBike `centred`). */
+export const shelfMarkup = '<rect class="bx-bench-front" x="-6000" y="' + (-GROUND + WORKTOP) + '" width="12000" height="40"/>' +
+  '<rect class="bx-bench-top" x="-6000" y="' + (-GROUND) + '" width="12000" height="' + WORKTOP + '"/>';

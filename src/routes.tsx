@@ -28,7 +28,7 @@ export function routes(): RouteObject[] {
 }
 
 /** The tools in the main nav, in Workstand order, once each one is switched on.
-    `short` is the label phones show (≤ 760 px), so the nav never wraps onto two lines. */
+    `short` is the label the nav shows on every screen; `label` is the link's accessible name. */
 export function navTools() {
   return [
     ...(isEnabled('exploreBike') ? [{ pillar: 'bike' as const, to: '/bike', label: 'Explore the bike', short: 'Explore' }] : []),

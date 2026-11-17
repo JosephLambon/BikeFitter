@@ -10,8 +10,8 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Icon } from '../components/Icon';
 import { Wrap } from '../components/layout';
-import { ExplodedBike } from '../features/bike/ExplodedBike';
-import { caughtUp, clamp, headBlend, reelProgress } from '../features/bike/explode';
+import { ExplodedBike, PartLabel } from '../features/bike/ExplodedBike';
+import { caughtUp, clamp, headBlend, reelProgress, tuckProgress } from '../features/bike/explode';
 import { ExplodeScrubber, SCRUBBER_H } from '../features/bike/ExplodeScrubber';
 import { CoilScrubber } from '../features/bike/CoilScrubber';
 import { benchWall, motion } from '../theme/tokens';
@@ -24,6 +24,8 @@ const REDUCED = '(prefers-reduced-motion: reduce)';
 /** Portrait phones too short for the build tray and the drawer's tab together (iPhone 14 in Safari is 664 px). */
 const SHORT = '@media (max-height: 720px)';
 const PORTRAIT = '(max-width: 760px)';
+/** The label's space above the dock on portrait phones: the 104 px window and 16 px below it. */
+const THUMB_SLOT = 120;
 /** A phone turned sideways: short and wide. */
 const LANDSCAPE = '(max-height: 500px) and (orientation: landscape)';
 
@@ -75,6 +77,31 @@ function useExplodeStage(reelRef: RefObject<HTMLElement | null>, scroll: boolean
   return { progress, fromSlider, toggle };
 }
 
+/** Larger screens (flag bikeTuck): once the reel is most of the way through, the heading and hint
+    scroll up out of view and the bench wall grows into their space. Writes `--tuck` (0..1) on the
+    layout and the heading's height as `--head-size`, straight to the style on every scroll, so
+    the page never re-renders for it. */
+function useTuck(on: boolean, reelRef: RefObject<HTMLElement | null>, layoutRef: RefObject<HTMLElement | null>, headRef: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const layout = layoutRef.current, head = headRef.current;
+    if (!on || !layout || !head) return;
+    const onScroll = () => {
+      const reel = reelRef.current;
+      if (reel) layout.style.setProperty('--tuck', String(Number(tuckProgress(window.scrollY, reel.offsetTop, reel.offsetHeight, window.innerHeight).toFixed(4))));
+    };
+    const size = () => layout.style.setProperty('--head-size', head.offsetHeight + 'px');
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    onScroll(); size();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(size);
+    ro?.observe(head);
+    return () => {
+      window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); ro?.disconnect();
+      layout.style.removeProperty('--tuck'); layout.style.removeProperty('--head-size');
+    };
+  }, [on, reelRef, layoutRef, headRef]);
+}
+
 export function ExploreBikePage() {
   const reduce = useMediaQuery(REDUCED, { noSsr: true });
   /* Phones. Portrait: title, then the stage (in proportion to the bike), the controls, and a
@@ -89,6 +116,10 @@ export function ExploreBikePage() {
   const scrolls = !reduce && !compact;
   const reelRef = useRef<HTMLElement>(null);
   const { progress, fromSlider, toggle } = useExplodeStage(reelRef, scrolls, reduce);
+  const layoutRef = useRef<HTMLElement>(null);
+  const headRef = useRef<HTMLElement>(null);
+  const tuck = scrolls && isEnabled('bikeTuck');
+  useTuck(tuck, reelRef, layoutRef, headRef);
   const canHover = useMediaQuery('(hover: hover)', { noSsr: true });
   // No scroll to cue (reduced motion, or a phone): the hint shows from the start.
   const t = scrolls ? headBlend(progress, false) : 1;
@@ -121,15 +152,22 @@ export function ExploreBikePage() {
   /* Portrait phones with the part drawer (flag bikeDrawer): the bench wall fills the screen,
      the info card sits in a window at the thumb that opens when a part is selected and can
      always be hidden, and the explode controls stay in a dock along the bottom. */
-  const drawer = portrait && isEnabled('bikeDrawer');
+  const drawer = portrait && !isEnabled('bikeThumbLabel') && isEnabled('bikeDrawer');
+  /* Portrait phones with the label at the thumb (flag bikeThumbLabel): no drawer. The part label (the
+     desktop window: name and what it is) waits just above the dock and shows only while a part is
+     picked. Its space is always kept, and the bike sits centred between the title and it, so nothing
+     moves when it shows. Like the drawer layout, the controls sit in the dock. */
+  const thumb = portrait && isEnabled('bikeThumbLabel');
+  const docked = drawer || thumb;
   // Open on load, on the guide; the thumb hides it.
   const [drawerOpen, setDrawerOpen] = useState(true);
   // The drawer and the build tray share the space above the dock: opening one hides the other,
   // so the bike always keeps room on the screen.
   const onSelect = useCallback((key: string | null) => {
     setSelected(key);
-    if (key && drawer) { setDrawerOpen(true); setOpen(false); }
-  }, [drawer]);
+    if (key && drawer) setDrawerOpen(true);
+    if (key && docked) setOpen(false);
+  }, [drawer, docked]);
   const openTray = useCallback((o: boolean) => {
     setOpen(o);
     if (o && drawer) setDrawerOpen(false);
@@ -139,6 +177,11 @@ export function ExploreBikePage() {
     if (o) setOpen(false);
   }, []);
   const hint = (canHover ? 'Hover a part to learn more.' : 'Tap a part to learn more.') + (canHover ? '' : ' Pinch to zoom.');
+  // Turning a phone (or resizing a window) across layouts mounts the drawing again with nothing
+  // picked, so let go of the page's pick too: the label never names a part that isn't picked.
+  const layout = land ? 'landscape' : thumb ? 'thumb' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide';
+  const [seenLayout, setSeenLayout] = useState(layout);
+  if (layout !== seenLayout) { setSeenLayout(layout); setSelected(null); }
   // The bouncing scroll cue turns into the hint as the bike starts to come apart. Where scroll
   // does nothing (a phone, or reduced motion) there is no cue, only the hint.
   const cue = (
@@ -185,7 +228,8 @@ export function ExploreBikePage() {
       className="stage-bike" data-testid="stage"
       sx={{
         // The workbench: amber dots on a white wall, with the bench drawn under the tyres.
-        position: 'relative', minHeight: 0, width: compact ? '100%' : 'min(1320px, 100% - 32px)', mx: 'auto', mt: compact ? 0 : '24px',
+        position: 'relative', minHeight: 0, width: compact ? '100%' : 'min(1320px, 100% - 32px)', mx: 'auto',
+        mt: compact ? 0 : tuck ? 'calc(24px - 40px * var(--tuck, 0))' : '24px',
         // clip, not hidden: nothing (focus, a zoomed drawing) can ever scroll the stage.
         p: compact ? '12px 12px 0' : '24px 24px 0', borderRadius: compact ? '16px' : '20px', overflow: 'clip', background: benchWall,
         boxShadow: 'inset 0 0 0 1px var(--bench-line)',
@@ -198,14 +242,22 @@ export function ExploreBikePage() {
         // It keeps the bike's proportions and sits near the top, so the drawer opening below it
         // never moves the bike. Capped on wider screens so the drawer keeps room to open.
         // Short screens give a little more of the height to the drawer's space, for the build tray.
-        ...(drawer && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none', [SHORT]: { maxHeight: '38svh' } }),
+        ...(docked && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none', [SHORT]: { maxHeight: '38svh' } }),
+        // The label at the thumb: a definite size (the bike's 4:3, as wide as the screen allows under
+        // the same height cap), so the grid can centre it and nothing on the wall can resize it. On a
+        // small phone it also shrinks to leave the label's space and 16 px of wall above and below
+        // (cqh: the wall's height; the wall is a size container).
+        ...(thumb && {
+          p: '4px', maxHeight: 'none', width: `min(100%, 42svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)`,
+          [SHORT]: { maxHeight: 'none', width: `min(100%, 38svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)` },
+        }),
         '& .bx-card:not(:empty)': { animation: `bf-rise .5s ${motion.rise}` },
         '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
       }}
     >
       <ExplodedBike
-        progress={progress} bench zoomable build={buildOn ? build : undefined}
-        cardHost={compact ? cardHost : undefined} onSelect={onSelect}
+        progress={progress} bench zoomable centred={thumb} build={buildOn ? build : undefined}
+        cardHost={compact ? (thumb ? null : cardHost) : undefined} label={!compact && isEnabled('bikeLabel')} onSelect={onSelect}
       />
     </Box>
   );
@@ -217,7 +269,7 @@ export function ExploreBikePage() {
         width: compact ? '100%' : buildOn ? 'min(680px, 100% - 32px)' : 'min(560px, 100% - 32px)', mx: 'auto', mt: compact ? 0 : '12px',
       }}
     >
-      {buildOn && <BuildToggle open={open} onOpenChange={openTray} build={build} controls={trayId} opensDown={portrait && !drawer} />}
+      {buildOn && <BuildToggle open={open} onOpenChange={openTray} build={build} controls={trayId} opensDown={portrait && !docked} />}
       {buildOn && (
         <Box component="span" aria-live="polite" data-testid="build-live" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>
           {said}
@@ -251,7 +303,7 @@ export function ExploreBikePage() {
     </Box>
   );
 
-  const tray = buildOn && <BuildTray build={build} onChange={change} open={open} id={trayId} stacked={compact} inline={portrait} fit={drawer} />;
+  const tray = buildOn && <BuildTray build={build} onChange={change} open={open} id={trayId} stacked={compact} inline={portrait} fit={docked} />;
 
   // Phones: the panel holds the build tray, then the docked info card, or (with nothing
   // selected) the hint and, in portrait on a touch screen, the invitation to turn the phone.
@@ -279,7 +331,7 @@ export function ExploreBikePage() {
     </Box>
   );
 
-  const dock = drawer && (
+  const dock = docked && (
     <Box
       data-testid="dock"
       sx={{
@@ -309,15 +361,16 @@ export function ExploreBikePage() {
         }}
       >
         <Box
-          data-layout={land ? 'landscape' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide'}
+          ref={layoutRef}
+          data-layout={layout}
           sx={{
             position: 'sticky', top: 0, height: '100svh', display: 'grid', overflow: 'hidden',
             ...(!compact && {
               gridTemplateRows: 'auto minmax(0, 1fr) auto auto', p: 'calc(var(--head-h) + 32px) 0 24px',
               [`@media ${REDUCED}`]: { position: 'relative', height: 'auto', minHeight: '100vh', pt: '32px' },
             }),
-            ...(drawer && { gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
-            ...(portrait && !drawer && {
+            ...(docked && { gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
+            ...(portrait && !docked && {
               gridTemplateRows: 'auto auto auto minmax(0, 1fr)', rowGap: '16px', alignContent: 'start',
               p: 'calc(var(--head-h) + 24px) var(--gutter) 0', width: 'min(560px, 100%)', mx: 'auto',
             }),
@@ -329,7 +382,22 @@ export function ExploreBikePage() {
         >
           {!compact && (
             <>
-              <Wrap sx={{ textAlign: 'center' }}>{title}{cue}</Wrap>
+              <Wrap
+                ref={headRef} data-testid="bike-head" data-tuck={tuck || undefined}
+                sx={{
+                  textAlign: 'center',
+                  /* bikeTuck: the heading rides up with the top of the bench wall and fades under the
+                     header, while its row collapses so the wall takes its space. The stage's margin
+                     does the last 40 px, so the wall ends 16 px under the header. */
+                  ...(tuck && {
+                    '--tuck-by': 'calc(var(--tuck, 0) * (var(--head-size, 0px) + 40px))',
+                    mb: 'calc(-1 * var(--tuck, 0) * var(--head-size, 0px))', transform: 'translateY(calc(-1 * var(--tuck-by)))',
+                    opacity: 'calc(1 - 1.25 * var(--tuck, 0))', willChange: 'transform, opacity',
+                  }),
+                }}
+              >
+                {title}{cue}
+              </Wrap>
               {stage}
               {tray}
               {controls}
@@ -354,7 +422,44 @@ export function ExploreBikePage() {
               {dock}
             </>
           )}
-          {portrait && !drawer && (
+          {thumb && (
+            <>
+              <Box sx={{ textAlign: 'center', p: '24px var(--gutter) 20px' }}>{title}</Box>
+              {/* The bench wall, from under the title to the dock: equal space above and below the
+                  bike, then the label's space. The build tray opens over the space below the bike
+                  and the label's, never over the bike. Every item names its cell: the tray shares
+                  the label's row, and auto-placement would push it into a second column. */}
+              <Box
+                data-testid="wall"
+                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', minHeight: 0, containerType: 'size', background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}
+              >
+                <Box sx={{ gridArea: '2 / 1', minHeight: 0 }}>{stage}</Box>
+                <Box
+                  data-testid="label-slot" data-hidden={open || undefined}
+                  sx={{
+                    gridArea: '4 / 1', height: THUMB_SLOT, p: '0 var(--gutter) 16px', display: 'grid', alignItems: 'end',
+                    '& > *': { gridArea: '1 / 1' }, ...(open && { visibility: 'hidden' }),
+                  }}
+                >
+                  <Typography
+                    component="p" data-testid="part-hint" aria-hidden={selected ? true : undefined}
+                    style={{ opacity: selected ? 0 : 1 }}
+                    sx={{ m: 0, pb: '8px', textAlign: 'center', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.45, transition: 'opacity .2s ease', [`@media ${REDUCED}`]: { transition: 'none' } }}
+                  >
+                    {hint}
+                  </Typography>
+                  <PartLabel partKey={selected} build={buildOn ? build : undefined} className="bx-label--thumb" />
+                </Box>
+                {tray && (
+                  <Box sx={{ gridArea: '3 / 1 / 5', alignSelf: 'end', minHeight: 0, maxHeight: '100%', display: 'flex', flexDirection: 'column', p: '12px var(--gutter) 16px', pointerEvents: open ? undefined : 'none' }}>
+                    {tray}
+                  </Box>
+                )}
+              </Box>
+              {dock}
+            </>
+          )}
+          {portrait && !docked && (
             <>
               <Box sx={{ textAlign: 'center' }}>{title}</Box>
               {stage}

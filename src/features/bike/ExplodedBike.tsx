@@ -4,7 +4,7 @@
    With a `build`, only that build's parts are drawn, and changing it plays a swap: leaving parts
    fly, roll or retract away, arriving ones follow, and deeper rims grow while the wheels spin. */
 import { createPortal } from 'react-dom';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
+import { Fragment as ReactFragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -12,8 +12,8 @@ import { SOURCES } from '../../content/sources';
 import type { Build } from './build';
 import { clamp, ease, explodeOffset, fitViewBox, placeCard, type Box as VBox, type Rect } from './explode';
 import { separate, type Piece } from './layout';
-import { IDENTITY, TAP_ZOOM, ZOOM_OUT_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
-import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, type Pt } from './drawing';
+import { IDENTITY, TAP_ZOOM, ZOOM_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
+import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, shelfMarkup, type Pt } from './drawing';
 import { FRAGMENTS, PARTS, drawnFragments, inBuild, partInfo, partsFor, unitOf, type Fragment, type PartDef, type Swap } from './parts';
 import { motion } from '../../theme/tokens';
 import './bike.css';
@@ -150,6 +150,13 @@ export interface ExplodedBikeProps {
   /** Dock the info card here (portalled) instead of floating it over the drawing. Pass null
       while the host is mounting: the card waits for it rather than floating. */
   cardHost?: HTMLElement | null;
+  /** Name the selected part in a fixed label centred above the drawing (its name and what it is)
+      instead of floating the info card beside it. Ignored with a card host. Default false. */
+  label?: boolean;
+  /** Centre the drawing in the stage, bench and all, instead of standing the bench on the stage's
+      bottom edge, so a stage centred on the page leaves equal space above and below the bike.
+      Default false. */
+  centred?: boolean;
   className?: string;
 }
 
@@ -226,7 +233,35 @@ function InfoCard({ partKey, lessonHref, build }: { partKey: string; lessonHref?
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, build, className }: ExplodedBikeProps) {
+/** The part label (AGENTS.md §5.1): a white window with an amber hairline, centred above the drawing
+    (or, on portrait phones, just above the dock), holding the
+    selected part's name and what it is. It shows only while a part is hovered or picked, and
+    keeps one place and one size, so nothing jumps as the pointer moves across the bike. When the
+    selection clears it fades out with its last words still in it. */
+export function PartLabel({ partKey, build, className }: { partKey: string | null; build?: Build; className?: string }) {
+  const last = useRef<string | null>(null);
+  // Each new pick gets fresh nodes in the live region, so screen readers announce it again, even
+  // the same part picked a second time. Re-renders of the same pick keep their nodes.
+  const pick = useRef({ key: null as string | null, seq: 0 });
+  if (partKey !== pick.current.key) pick.current = { key: partKey, seq: pick.current.seq + (partKey ? 1 : 0) };
+  if (partKey) last.current = partKey;
+  const key = partKey ?? last.current;
+  const p = key ? partInfo(key, build) : null;
+  return (
+    <div className={'bx-label' + (className ? ' ' + className : '')} data-testid="part-label" role="status" aria-live="polite">
+      <div className="bx-label-win" data-testid="part-label-window" data-shown={partKey ? 'true' : 'false'} aria-hidden={partKey ? undefined : true}>
+        {p && (
+          <ReactFragment key={key + ':' + pick.current.seq}>
+            <h3 className="bx-label-name">{p.name}</h3>
+            <p className="bx-label-what">{p.what}</p>
+          </ReactFragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, label = false, centred = false, build, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
@@ -265,23 +300,29 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
   const motionOk = !reduce && canAnimate();
 
-  /* Back to the whole bike: a quick ease-out zoom, not a jump. The Reset chip goes at once. */
-  const zoomOut = useCallback(() => {
-    if (!motionOk || !isZoomed(zoom.current)) { commitZoom(IDENTITY); return; }
+  /* A quick ease-out glide to another zoom, not a jump: back to the whole bike (Reset zoom, a
+     double-tap while zoomed), or in to where a double-tap landed. The spot under the finger stays
+     put all the way (zoomBetween). Zooming out, the Reset chip goes at once; zooming in, it comes
+     when the glide ends. Instant with reduced motion. */
+  const zoomTo = useCallback((to: Zoom) => {
+    if (!motionOk) { commitZoom(to); return; }
     stopZoomAnim();
     const from = zoom.current;
-    setZoomed(false);
+    if (!isZoomed(to)) setZoomed(false);
     let start: number | null = null;
     const step = (ts: number) => {
       if (start === null) start = ts;
-      const k = clamp((ts - start) / ZOOM_OUT_MS);
-      if (k >= 1) { zoomAnim.current = 0; commitZoom(IDENTITY); return; }
-      zoom.current = zoomBetween(from, IDENTITY, 1 - Math.pow(1 - k, 3));
+      const k = clamp((ts - start) / ZOOM_MS);
+      if (k >= 1) { zoomAnim.current = 0; commitZoom(to); return; }
+      zoom.current = zoomBetween(from, to, 1 - Math.pow(1 - k, 3));
       applyView();
       zoomAnim.current = requestAnimationFrame(step);
     };
     zoomAnim.current = requestAnimationFrame(step);
   }, [motionOk, commitZoom, stopZoomAnim, applyView]);
+  const zoomOut = useCallback(() => {
+    if (isZoomed(zoom.current)) zoomTo(IDENTITY); else commitZoom(IDENTITY);
+  }, [zoomTo, commitZoom]);
   useEffect(() => stopZoomAnim, [stopZoomAnim]);
   const targetDepth = build?.rims === 'deep' ? 1 : 0;
   const [depth, setDepth] = useState(targetDepth);
@@ -405,9 +446,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       benchRef.current?.setAttribute('transform', drop ? `translate(0 ${Math.round(drop)})` : '');
       box = { x, y, width, height: Math.max(height, BENCH_BOTTOM + drop - y) };
     }
-    const vb = fitViewBox(box, progress, aspect, bench);
+    const vb = fitViewBox(box, progress, aspect, bench && !centred);
     if (vb) { baseVb.current = vb; applyView(); }
-  }, [progress, size, bench, shown, leaving, vec, applyView]);
+  }, [progress, size, bench, centred, shown, leaving, vec, applyView]);
 
   /* Zoom gestures: pinch and drag on touch screens, double-tap to zoom in or back out, ctrl +
      wheel (trackpad pinch) on desktop. They act on the drawing only: the page never zooms or
@@ -424,7 +465,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     let lastTap: { t: number; x: number; y: number } | null = null;
     let multi = false;
     const onStart = (e: TouchEvent) => {
-      stopZoomAnim();
+      // A touch stops a glide where it is, and commits it, so the Reset chip and panning match
+      // the zoom the rider now sees.
+      if (zoomAnim.current) commitZoom(zoom.current);
       if (e.touches.length >= 2) {
         e.preventDefault();
         multi = true; pan = null;
@@ -465,7 +508,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
         e.preventDefault(); // a double-tap zooms; it doesn't also select
         const f = frac(t.clientX, t.clientY);
         if (isZoomed(zoom.current)) zoomOut();
-        else commitZoom(zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
+        else zoomTo(zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
         lastTap = null;
       } else lastTap = { t: now, x: t.clientX, y: t.clientY };
     };
@@ -518,7 +561,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       svg.removeEventListener('pointerdown', onDown); svg.removeEventListener('pointermove', onDragMove);
       svg.removeEventListener('pointerup', onUp); svg.removeEventListener('pointercancel', onUp);
     };
-  }, [zoomable, applyView, commitZoom, zoomOut, stopZoomAnim]);
+  }, [zoomable, applyView, commitZoom, zoomOut, zoomTo, stopZoomAnim]);
 
 
   /* Play the swap: departures first, then arrivals; leaving parts are dropped once they have gone. */
@@ -565,12 +608,14 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   /* With a card host (phones), the card always docks there; otherwise it always floats. One
      source of truth, so no width can leave the card nowhere. */
   const docked = cardHost !== undefined;
+  // The fixed label replaces the floating card on larger screens; phones keep their docked card.
+  const labelled = label && interactive && !docked;
 
   /* Place the card again whenever its own size changes (a web font arriving, copy changing). */
   const [cardTick, setCardTick] = useState(0);
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || docked || typeof ResizeObserver === 'undefined') return;
+    if (!el || docked || labelled || typeof ResizeObserver === 'undefined') return;
     let last = '';
     const ro = new ResizeObserver(() => {
       const k = el.offsetWidth + 'x' + el.offsetHeight;
@@ -578,13 +623,13 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [docked]);
+  }, [docked, labelled]);
 
   /* The card rule (AGENTS.md §5.1): avoid the selected part, and cover as few other parts as
      possible. When no shape misses the part, the card takes the place that covers least; the
      drawing itself never moves or zooms for the card. */
   useLayoutEffect(() => {
-    if (!interactive || !active || docked) { setCardPos(null); return; }
+    if (!interactive || !active || docked || labelled) { setCardPos(null); return; }
     const hostEl = hostRef.current!;
     const host = hostEl.getBoundingClientRect();
     const stage = hostEl.querySelector('.bx-stage')!.getBoundingClientRect();
@@ -620,7 +665,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     el.style.width = pos.width + 'px'; // React won't re-apply an unchanged style, so leave the chosen width set
     lastCard.current = { key: active, pos };
     setCardPos(pos);
-  }, [interactive, active, docked, progress, size, vectors, zoomTick, build, cardTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [interactive, active, docked, labelled, progress, size, vectors, zoomTick, build, cardTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Escape clears the selection from anywhere. */
   useEffect(() => {
@@ -700,8 +745,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   return (
     <div
       ref={hostRef}
-      className={['bx', interactive && 'bx--interactive', active && 'has-active', docked && 'bx--docked', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
+      className={['bx', interactive && 'bx--interactive', active && 'has-active', docked && 'bx--docked', labelled && 'bx--label', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
     >
+      {labelled && <PartLabel partKey={active} build={build} />}
       <div className="bx-stage">
         <svg
           ref={svgRef}
@@ -713,7 +759,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           style={zoomable ? { touchAction: zoomed ? 'none' : 'pan-y' } : undefined}
           {...pointerHandlers}
         >
-          {bench && <g ref={benchRef} className="bx-bench" data-testid="bx-bench" dangerouslySetInnerHTML={{ __html: benchMarkup }} />}
+          {bench && <g ref={benchRef} className="bx-bench" data-testid="bx-bench" dangerouslySetInnerHTML={{ __html: centred ? shelfMarkup : benchMarkup }} />}
           <g ref={rootRef} className="bx-root">
             <g className="bx-ground" style={{ opacity: clamp(1 - progress * 3) }} dangerouslySetInnerHTML={{ __html: groundMarkup }} />
             {shown.map((f) => {
@@ -750,7 +796,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           <button type="button" className="bx-zoom-reset" onClick={zoomOut}>Reset zoom</button>
         )}
       </div>
-      {docked ? (cardHost ? createPortal(card, cardHost) : null) : card}
+      {docked ? (cardHost ? createPortal(card, cardHost) : null) : labelled ? null : card}
     </div>
   );
 }

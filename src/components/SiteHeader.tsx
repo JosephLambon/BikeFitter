@@ -40,13 +40,10 @@ export function SiteHeader() {
                     '&:hover': { background: 'var(--surface)', color: 'var(--ink)' },
                     '&[aria-current="page"]': { background: 'var(--surface-2)', color: 'var(--ink)' },
                     '& .ico': { width: 17, height: 17, color: 'var(--tone)' },
-                    '& .nav-short': { display: 'none' },
-                    '@media (max-width: 760px)': { '& .nav-full': { display: 'none' }, '& .nav-short': { display: 'inline' } },
                   }}
                 >
                   <Icon name={t.pillar} />
-                  <span className="nav-full">{t.label}</span>
-                  <span className="nav-short">{t.short}</span>
+                  <span>{t.short}</span>
                 </Box>
               </li>
             ))}
