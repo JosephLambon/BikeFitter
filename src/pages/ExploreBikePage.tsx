@@ -23,7 +23,7 @@ const REDUCED = '(prefers-reduced-motion: reduce)';
 const SHORT = '@media (max-height: 720px)';
 const PORTRAIT = '(max-width: 760px)';
 /** The part label's space on phones: the 104 px window and 16 px below it. */
-const THUMB_SLOT = 120;
+const LABEL_SLOT = 120;
 /** A phone turned sideways: short and wide. */
 const LANDSCAPE = '(max-height: 500px) and (orientation: landscape)';
 
@@ -142,10 +142,11 @@ export function ExploreBikePage() {
   const fromCoil = useCallback((p: number) => { setScrubbed(true); fromSlider(p); }, [fromSlider]);
 
   const [selected, setSelected] = useState<string | null>(null);
-  // On phones the build tray and the part label share one space: picking a part closes the tray.
-  const onSelect = useCallback((key: string | null) => {
+  // On phones the build tray and the part label share one space: picking a part (not only
+  // hovering it with a mouse) closes the tray.
+  const onSelect = useCallback((key: string | null, picked: boolean) => {
     setSelected(key);
-    if (key && compact) setOpen(false);
+    if (picked && compact) setOpen(false);
   }, [compact]);
   const hint = (canHover ? 'Hover a part to learn more.' : 'Tap a part to learn more.') + (canHover ? '' : ' Pinch to zoom.');
   // Turning a phone (or resizing a window) across layouts mounts the drawing again with nothing
@@ -214,8 +215,8 @@ export function ExploreBikePage() {
            wall is a size container). Short screens give a little more height to the build tray. */
         ...(portrait && {
           height: 'auto', aspectRatio: '4 / 3', p: '4px', borderRadius: 0, background: 'none', boxShadow: 'none',
-          width: `min(100%, 42svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)`,
-          [SHORT]: { width: `min(100%, 38svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)` },
+          width: `min(100%, 42svh * 4 / 3, (100cqh - ${LABEL_SLOT + 32}px) * 4 / 3)`,
+          [SHORT]: { width: `min(100%, 38svh * 4 / 3, (100cqh - ${LABEL_SLOT + 32}px) * 4 / 3)` },
         }),
       }}
     >
@@ -246,7 +247,7 @@ export function ExploreBikePage() {
     </Box>
   );
 
-  const tray = <BuildTray build={build} onChange={change} open={open} id={trayId} fit={compact} />;
+  const tray = <BuildTray build={build} onChange={change} open={open} id={trayId} fit={compact} beside={portrait} />;
 
   /* Phones, portrait and landscape alike: the part label (the desktop window: name and what it
      is) waits in its own space and shows only while a part is picked; until then the hint sits
@@ -255,7 +256,7 @@ export function ExploreBikePage() {
     <Box
       data-testid="label-slot" data-hidden={open || undefined}
       sx={{
-        gridArea: '4 / 1', height: THUMB_SLOT, p: portrait ? '0 var(--gutter) 16px' : '0 0 16px', display: 'grid', alignItems: 'end',
+        gridArea: '4 / 1', height: LABEL_SLOT, p: portrait ? '0 var(--gutter) 16px' : '0 0 16px', display: 'grid', alignItems: 'end',
         '& > *': { gridArea: '1 / 1' }, ...(open && { visibility: 'hidden' }),
       }}
     >
@@ -266,7 +267,7 @@ export function ExploreBikePage() {
       >
         {hint}
       </Typography>
-      <PartLabel partKey={selected} build={build} className="bx-label--thumb" />
+      <PartLabel partKey={selected} build={build} className="bx-label--phone" />
     </Box>
   );
   const traySlot = compact && (
@@ -278,7 +279,7 @@ export function ExploreBikePage() {
   return (
     <Box component="main" id="main" data-pillar="bike">
       <title>Explore the bike · BikeFitter</title>
-      <meta name="description" content="Take a road bike apart, part by part. Select any part to see what it does, how it works and whether it affects your fit." />
+      <meta name="description" content="Take a road bike apart, part by part, and swap common parts. Select any part to see its name and what it is." />
 
       <Box
         component="section" id="reel" ref={reelRef} aria-labelledby="bike-h"
@@ -300,7 +301,7 @@ export function ExploreBikePage() {
             }),
             ...(portrait && { gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
             ...(land && {
-              gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 38%)', gridTemplateRows: 'minmax(0, 1fr) auto', gap: '12px 20px',
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(240px, 34%)', gridTemplateRows: 'minmax(0, 1fr) auto', gap: '12px 20px',
               p: 'calc(var(--head-h) + 12px) max(var(--gutter), env(safe-area-inset-right)) 12px max(var(--gutter), env(safe-area-inset-left))',
             }),
           }}

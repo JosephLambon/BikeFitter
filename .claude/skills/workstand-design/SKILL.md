@@ -47,7 +47,7 @@ Work through these in order. Each step has one right answer in Workstand; if non
    | Shelf card | `--surface` fill, 14 px radius, no border, no shadow, 24–32 px padding | Grouped content: levels, how-it-works steps, evidence cards, facts, checklists |
    | Hairline card | 1 px `--rule` border, 14 px radius, no fill | Lighter lists where shelf cards would feel heavy (anatomy of a lesson, style-guide cells) |
    | Pegboard panel | The dotted tint (recipe below), 20 px radius (16 px at ≤ 760 px) | The stage behind a window or the one big moment: hero figure, result, takeaway, "next" panel, tool previews |
-   | Window | `--bg` fill, 12 px radius, `--shadow`, optional 1 px `--rule` title bar with a tool icon | Anything live or previewed: the bike host, fit question card, result details, part info card, interface previews |
+   | Window | `--bg` fill, 12 px radius, `--shadow`, optional 1 px `--rule` title bar with a tool icon | Anything live or previewed: the bike host, fit question card, result details, the bike's part label, interface previews |
    | Chip | 8 px radius, 4 × 10 px padding, 13 px semibold | Eyebrows, level and unit numbers, field pairs, tool pills |
    | Segmented control | `--surface-2` track, 10 px radius, 3 px inset on all sides; equal options, 0 × 12 px padding, 36 px tall, 13 px semibold `--ink-2`; the picked option sits on an 8 px thumb with `--tone-tint` fill, a 1 px `--tone` hairline and `--tone` text, sliding 0.4 s on the rise curve. Native radios underneath. App: `src/components/Segmented.tsx`; prototype: `.seg` | Choosing one of two to four options that is always set: the bike's build tray, the units toggle |
 

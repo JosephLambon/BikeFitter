@@ -43,9 +43,9 @@ Light `--fit` and `--bike` were darkened on 6 November 2026 (from `#13834a` and 
 | Token or value | Use |
 |---|---|
 | Radius 20 px (16 px at ≤ 760 px) | Pegboard panels: hero figure, `.figure`, `.result`, `.takeaway`, `.next` |
-| Radius 14 px | Cards, the bike host window, fit question card, info card, evidence, levels, facts |
+| Radius 14 px | Cards, the bike host window, fit question card, evidence, levels, facts |
 | Radius 12 px | Windows (12 12 0 0 when they sit on a pegboard's bottom edge), fields, pager |
-| Radius 10 px | Buttons, `.more`, nav links, icon buttons, the fit box inside the info card |
+| Radius 10 px | Buttons, `.more`, nav links, icon buttons |
 | Radius 8 px | Chips, tags, the brand mark, number badges |
 | Radius 6–7 px | Inline badges: `kbd`, mini-list numbers, explode percentage, lesson numbers, focus ring |
 | `--shadow` light | `0 1px 2px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.09)`, windows only |

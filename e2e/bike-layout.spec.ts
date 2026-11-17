@@ -646,7 +646,7 @@ test.describe('Phone, landscape', () => {
     expect(Math.abs(w.width - side.width)).toBeLessThanOrEqual(1);
     expect(w.y).toBeGreaterThanOrEqual(title.y + title.height);
     expect(w.y + w.height).toBeLessThanOrEqual(390);
-    await expect(page.getByTestId('part-label')).toHaveClass(/bx-label--thumb/);
+    await expect(page.getByTestId('part-label')).toHaveClass(/bx-label--phone/);
     const look = await win.evaluate((el) => { const c = getComputedStyle(el); return { bg: c.backgroundColor, ring: c.boxShadow, radius: c.borderTopLeftRadius }; });
     expect(look.bg).toBe('rgb(255, 255, 255)');
     expect(look.ring).toContain('rgb(168, 81, 0) 0px 0px 0px 1px inset'); // the 1 px Bike-amber hairline
@@ -667,6 +667,45 @@ test.describe('Phone, landscape', () => {
     await page.getByRole('button', { name: 'Stem, Cockpit' }).tap();
     await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'false');
     await expect(page.getByTestId('part-label-window')).toHaveText(/Stem/);
+  });
+});
+
+test.describe('Phone, landscape: small screens', () => {
+  test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+
+  for (const [w, h] of [[667, 375], [568, 320]] as const) {
+    test(`every build switch's words fit inside its button, and the bike stays wider than the column, at ${w}×${h}`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto('/bike');
+      const stage = (await page.getByTestId('stage').boundingBox())!, side = (await page.getByTestId('side').boundingBox())!;
+      expect(stage.width).toBeGreaterThan(side.width);
+      await page.getByRole('button', { name: /^Build/ }).click();
+      await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'true');
+      await page.waitForTimeout(600);
+      const overflow = await page.getByTestId('build-tray').evaluate((tray) =>
+        [...tray.querySelectorAll<HTMLElement>('[role="radio"]')].filter((r) => r.scrollWidth > r.clientWidth + 1).map((r) => r.textContent));
+      expect(overflow).toEqual([]);
+    });
+  }
+
+  test('a long description keeps the label window’s padding: the window grows, never squeezes', async ({ page }) => {
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.goto('/bike');
+    for (const name of ['Gear cable, Drivetrain', 'Bottom bracket shell, Frame', 'Saddle, Contact points']) {
+      await page.getByRole('button', { name }).focus(); // keyboard pick: thin parts are hard to hit by tap
+      const win = page.getByTestId('part-label-window');
+      await expect(win).toHaveText(new RegExp(name.split(',')[0]));
+      await expect(win).toBeVisible();
+      await page.waitForTimeout(400);
+      const gap = await win.evaluate((el) => {
+        const w = el.getBoundingClientRect(), r = document.createRange();
+        r.selectNodeContents(el); const t = r.getBoundingClientRect();
+        return { top: t.top - w.top, bottom: w.bottom - t.bottom, fits: w.bottom <= innerHeight };
+      });
+      expect(gap.top, name).toBeGreaterThanOrEqual(11);
+      expect(gap.bottom, name).toBeGreaterThanOrEqual(11);
+      expect(gap.fits, name).toBe(true);
+    }
   });
 });
 

@@ -87,8 +87,6 @@ function shiftMech(host: HTMLElement, delay: number) {
   }
 }
 
-/** Card widths to try, narrowest first: wider cards are shorter, so they fit above or below a big part. */
-
 /** Clear space between parts when the bike is fully apart, in mm. */
 const LAYOUT_GAP = 28;
 /** How far each part's strokes reach beyond its geometry (getBBox leaves strokes out). */
@@ -117,7 +115,9 @@ export interface ExplodedBikeProps {
   progress: number;
   /** Hover, tap and keyboard selection. Default true. */
   interactive?: boolean;
-  onSelect?: (key: string | null) => void;
+  /** Called when the selection changes: the part (or null), and whether it is picked (a click,
+      tap or key) rather than only hovered. */
+  onSelect?: (key: string | null, picked: boolean) => void;
   /** The build to draw (see build.ts). Without one, the original drawing. */
   build?: Build;
   /** Stand the bike on a workbench that runs to the host's edges (clip it there). Default false. */
@@ -125,7 +125,7 @@ export interface ExplodedBikeProps {
   /** Pinch, double-tap and ctrl + wheel zoom the drawing on its own (never the page). Default false. */
   zoomable?: boolean;
   /** Name the selected part in a fixed label centred above the drawing (its name and what it is).
-      Off where the page shows the label elsewhere (phones). Default false. */
+      Turn it off only where the page shows the label itself (phones). Default true. */
   label?: boolean;
   /** Centre the drawing in the stage, bench and all, instead of standing the bench on the stage's
       bottom edge, so a stage centred on the page leaves equal space above and below the bike.
@@ -174,7 +174,7 @@ const Frag = memo(function Frag({ frag, label, active, leaving, transform, focus
 });
 
 /** The part label (AGENTS.md §5.1): a white window with an amber hairline, centred above the drawing
-    (or, on portrait phones, just above the dock), holding the
+    (or, on phones, in a space of its own beside or below it), holding the
     selected part's name and what it is. It shows only while a part is hovered or picked, and
     keeps one place and one size, so nothing jumps as the pointer moves across the bike. When the
     selection clears it fades out with its last words still in it. */
@@ -201,7 +201,7 @@ export function PartLabel({ partKey, build, className }: { partKey: string | nul
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, onSelect, bench = false, zoomable = false, label = false, centred = false, build, className }: ExplodedBikeProps) {
+export function ExplodedBike({ progress, interactive = true, onSelect, bench = false, zoomable = false, label = true, centred = false, build, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
@@ -333,12 +333,12 @@ export function ExplodedBike({ progress, interactive = true, onSelect, bench = f
   onSelectRef.current = onSelect;
 
   const select = useCallback((key: string | null, pin: boolean) => {
-    const prev = state.current.active;
-    if (key === prev && pin === state.current.pinned) return;
+    const prev = state.current.active, wasPinned = state.current.pinned;
+    if (key === prev && pin === wasPinned) return;
     state.current = { active: key, pinned: !!key && pin };
     setActive(key);
     setPinned(!!key && pin);
-    if (key !== prev) onSelectRef.current?.(key);
+    if (key !== prev || (!!key && pin) !== wasPinned) onSelectRef.current?.(key, !!key && pin);
   }, []);
 
   /* Track the host's size: it drives the viewBox. */

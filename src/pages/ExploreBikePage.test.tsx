@@ -3,12 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderApp } from '../test/renderApp';
 
-function reducedMotion(on: boolean) {
+/** Fake media queries: `matches` decides which ones hold. */
+function stubMedia(matches: (query: string) => boolean) {
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: on && query.includes('prefers-reduced-motion: reduce'), media: query, onchange: null,
+    matches: matches(query), media: query, onchange: null,
     addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
   }));
 }
+const reducedMotion = (on: boolean) => stubMedia((q) => on && q.includes('prefers-reduced-motion: reduce'));
+const PORTRAIT = '(max-width: 760px)';
+const LANDSCAPE = '(max-height: 500px) and (orientation: landscape)';
+const portraitPhone = () => stubMedia((q) => q === PORTRAIT);
+const landscapePhone = () => stubMedia((q) => q === LANDSCAPE);
+const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ', ') });
 const slider = () => screen.getByRole('slider', { name: 'How far apart the bike is' });
 
 /** Give the reel a real size (jsdom has no layout): 3000 px tall at y = 0, 1000 px viewport. */
@@ -103,7 +110,7 @@ describe('Explore the bike page', () => {
     expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
   });
 
-  it('tucks the heading away and grows the bench wall once the reel is most of the way through ', () => {
+  it('tucks the heading away and grows the bench wall once the reel is most of the way through', () => {
     reducedMotion(false);
     renderApp('/bike');
     sizeReel();
@@ -216,14 +223,6 @@ describe('Explore the bike: build tray', () => {
 });
 
 describe('Explore the bike on a portrait phone', () => {
-  /** A portrait phone: 760 px wide or less, not a short landscape screen. */
-  function portraitPhone() {
-    vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(max-width: 760px)', media: query, onchange: null,
-      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
-    }));
-  }
-  const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ', ') });
 
   it('no drawer; the hint waits above the dock and the label stays hidden until a part is picked', () => {
     portraitPhone();
@@ -238,10 +237,7 @@ describe('Explore the bike on a portrait phone', () => {
   });
 
   it('a narrow window with a mouse is told to hover, not tap or pinch', () => {
-    vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(max-width: 760px)' || query === '(hover: hover)', media: query, onchange: null,
-      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
-    }));
+    stubMedia((q) => q === PORTRAIT || q === '(hover: hover)');
     renderApp('/bike');
     expect(within(screen.getByTestId('label-slot')).getByTestId('part-hint')).toHaveTextContent('Hover a part to learn more.');
   });
@@ -297,14 +293,6 @@ describe('Explore the bike on a portrait phone', () => {
 });
 
 describe('Explore the bike on a landscape phone', () => {
-  /** A phone turned sideways: short and wide, on a touch screen. */
-  function landscapePhone() {
-    vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(max-height: 500px) and (orientation: landscape)', media: query, onchange: null,
-      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
-    }));
-  }
-  const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ', ') });
 
   it('shows the same label as portrait: the hint waits in its space, and the label stays hidden until a part is picked', () => {
     landscapePhone();
@@ -322,7 +310,7 @@ describe('Explore the bike on a landscape phone', () => {
     renderApp('/bike');
     await userEvent.click(part('Saddle'));
     const label = within(screen.getByTestId('label-slot')).getByRole('status');
-    expect(label).toHaveClass('bx-label--thumb');
+    expect(label).toHaveClass('bx-label--phone');
     expect(label).toHaveTextContent('Saddle');
     expect(label).toHaveTextContent('Where you sit');
     expect(label).not.toHaveTextContent('Why it matters for fit');
@@ -344,5 +332,16 @@ describe('Explore the bike on a landscape phone', () => {
     expect(tray).toHaveAttribute('data-open', 'false');
     expect(screen.getByTestId('label-slot')).not.toHaveAttribute('data-hidden');
     expect(screen.getByTestId('part-label-window')).toHaveAttribute('data-shown', 'true');
+  });
+
+  it('a mouse hovering a part does not close the build tray; only a pick does', async () => {
+    stubMedia((q) => q === LANDSCAPE || q === '(hover: hover)');
+    renderApp('/bike');
+    const tray = screen.getByTestId('build-tray');
+    await userEvent.click(screen.getByRole('button', { name: /^Build/ }));
+    fireEvent.pointerOver(part('Fork'), { pointerType: 'mouse' });
+    expect(tray).toHaveAttribute('data-open', 'true');
+    await userEvent.click(part('Fork'));
+    expect(tray).toHaveAttribute('data-open', 'false');
   });
 });

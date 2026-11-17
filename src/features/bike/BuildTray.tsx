@@ -16,9 +16,12 @@ export interface BuildTrayProps {
   open: boolean;
   /** The id the toggle's aria-controls points at. */
   id: string;
-  /** Fills a bounded slot (the phone layouts): one dense row per option, label beside its
-      control, in a window that scrolls inside the slot. */
+  /** Fills a bounded slot (the phone layouts): one dense card per option, in a window that
+      scrolls inside the slot. */
   fit?: boolean;
+  /** With `fit`: each label beside its control (portrait, where the slot is wide), not above it
+      (landscape's narrow side column, where the switch needs the whole width). */
+  beside?: boolean;
 }
 
 const REDUCED = '@media (prefers-reduced-motion: reduce)';
@@ -60,8 +63,7 @@ export function BuildToggle({ open, onOpenChange, build, controls }: { open: boo
   );
 }
 
-export function BuildTray({ build, onChange, open, id, fit = false }: BuildTrayProps) {
-  const row = { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center', p: '8px' };
+export function BuildTray({ build, onChange, open, id, fit = false, beside = false }: BuildTrayProps) {
   return (
     <Box
       id={id} data-open={open} inert={!open} data-testid="build-tray"
@@ -81,7 +83,7 @@ export function BuildTray({ build, onChange, open, id, fit = false }: BuildTrayP
             display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px', pt: fit ? 0 : '12px',
             // Tablets: three cards over two, both rows full width.
             '@media (max-width: 980px)': { gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', '& > *': { gridColumn: 'span 2' }, '& > :nth-of-type(n+4)': { gridColumn: 'span 3' } },
-            '@media (max-width: 760px)': { gridTemplateColumns: '1fr', gap: '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } },
+            // Phones (always `fit`): one card per row.
             ...(fit && { '&&': { gridTemplateColumns: '1fr', gap: '4px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } } }),
           }}
         >
@@ -93,12 +95,11 @@ export function BuildTray({ build, onChange, open, id, fit = false }: BuildTrayP
                 sx={{
                   // Shelf card: --surface, 14 px radius, equal padding on every side.
                   display: 'grid', gap: '8px', p: '12px', borderRadius: '14px', background: 'var(--surface)',
-                  '@media (max-width: 760px)': row,
-                  // A tight slot: denser rows, so more options show before it scrolls.
-                  ...(fit && { '&&': row, '&&&': { p: '4px 4px 4px 8px', borderRadius: '10px' } }),
+                  // A tight slot: denser cards, so more options show before it scrolls.
+                  ...(fit && { '&&': { gap: '4px', p: beside ? '4px 4px 4px 8px' : '8px 4px 4px', borderRadius: '10px', ...(beside && { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center' }) } }),
                 }}
               >
-                <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', '@media (max-width: 760px)': { pl: '6px' }, ...(fit && { '&&': { pl: '6px' } }) }}>
+                <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', ...(fit && { '&&': { pl: '6px' } }) }}>
                   {o.label}
                   {build[o.key] !== DEFAULT_BUILD[o.key] && <Box component="span" aria-hidden="true" sx={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--tone)' }} />}
                 </Box>

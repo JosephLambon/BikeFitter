@@ -74,8 +74,10 @@
 .bx-label-win > .bx-label-what { animation-delay: .04s; }
 @keyframes bx-label-in { from { opacity: 0; transform: translateY(3px); } }
 /* Phones, portrait and landscape: the same window, full width, in its own slot (above the dock in portrait, at the foot of the side column in landscape). */
-.bx-label.bx-label--thumb { height: auto; padding: 0; display: block; }
-.bx-label--thumb .bx-label-win { width: 100%; display: flex; flex-direction: column; justify-content: center; padding: 12px 16px; }
+.bx-label.bx-label--phone { height: auto; padding: 0; display: block; }
+/* At least 104 px; a long description in landscape's narrow column grows the window upwards
+   rather than squeezing its padding. */
+.bx-label--phone .bx-label-win { width: 100%; height: auto; min-height: 104px; display: flex; flex-direction: column; justify-content: center; padding: 12px 16px; }
 @media (prefers-reduced-motion: reduce) { .bx-label-win, .bx-label-win[data-shown="false"] { transition: none; transform: none; } .bx-label-win > * { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {
