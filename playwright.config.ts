@@ -1,11 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
-/** A second server with the coil scrubber's and the part label's flags off, so the cable scrubber and
-    the floating info card they replace keep their tests. */
+/** A second server with the coil scrubber's, the part label's and the phone label's flags off, so the
+    cable scrubber, the floating info card and the part drawer they replace keep their tests. */
 const CABLE_PORT = 4174;
 const FLAGS = { VITE_FLAG_EXPLORE_BIKE: 'true', VITE_FLAG_BIKE_BUILD: 'true', VITE_FLAG_BIKE_DRAWER: 'true' };
-const OFF = /cable-scrubber|info-card/;
+const OFF = /cable-scrubber|info-card|part-drawer/;
 
 export default defineConfig({
   testDir: './e2e',
@@ -22,13 +22,13 @@ export default defineConfig({
       command: `npx vite --port ${PORT} --strictPort`,
       url: `http://localhost:${PORT}`,
       reuseExistingServer: !process.env.CI,
-      env: { ...FLAGS, VITE_FLAG_BIKE_COIL: 'true', VITE_FLAG_BIKE_LABEL: 'true' },
+      env: { ...FLAGS, VITE_FLAG_BIKE_COIL: 'true', VITE_FLAG_BIKE_LABEL: 'true', VITE_FLAG_BIKE_TUCK: 'true', VITE_FLAG_BIKE_THUMB_LABEL: 'true' },
     },
     {
       command: `npx vite --port ${CABLE_PORT} --strictPort`,
       url: `http://localhost:${CABLE_PORT}`,
       reuseExistingServer: !process.env.CI,
-      env: { ...FLAGS, VITE_FLAG_BIKE_COIL: 'false', VITE_FLAG_BIKE_LABEL: 'false' },
+      env: { ...FLAGS, VITE_FLAG_BIKE_COIL: 'false', VITE_FLAG_BIKE_LABEL: 'false', VITE_FLAG_BIKE_TUCK: 'false', VITE_FLAG_BIKE_THUMB_LABEL: 'false' },
     },
   ],
 });

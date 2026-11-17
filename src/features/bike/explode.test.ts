@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { caughtUp, explodeOffset, fitViewBox, headBlend, placeCard, reelProgress, sliderText } from './explode';
+import { caughtUp, explodeOffset, fitViewBox, headBlend, placeCard, reelProgress, sliderText, tuckProgress } from './explode';
 
 describe('explodeOffset', () => {
   const part = { v: [100, 200] as [number, number], w: [0.2, 0.6] as [number, number] };
@@ -108,6 +108,25 @@ describe('reelProgress', () => {
   });
   it('keeps the current progress when the reel cannot scroll', () => {
     expect(reelProgress(0, 0, 800, 1000, 0.3)).toBe(0.3);
+  });
+});
+
+describe('tuckProgress', () => {
+  // Reel 3000 px tall from y = 0, viewport 1000 px: 2000 px of travel.
+  it.each([
+    [0, 0],
+    [1100, 0], // the heading stays while the bike comes apart (55% of travel)
+    [1400, 0.5], // halfway through the tuck, eased
+    [1700, 1], // gone by 85% of travel
+    [2000, 1],
+  ])('scrollY %s gives %s', (y, t) => {
+    expect(tuckProgress(y, 0, 3000, 1000)).toBeCloseTo(t);
+  });
+  it('eases in, so the first stretch moves less than its share', () => {
+    expect(tuckProgress(1160, 0, 3000, 1000)).toBeLessThan(0.1);
+  });
+  it('stays put when the reel cannot scroll', () => {
+    expect(tuckProgress(500, 0, 800, 1000)).toBe(0);
   });
 });
 

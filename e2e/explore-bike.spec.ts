@@ -29,6 +29,39 @@ test.describe('Explore the bike', () => {
     await expect(slider).not.toHaveAttribute('aria-valuetext', 'Together');
   });
 
+  test('near the end of the reel the heading scrolls away and the bench wall grows into its space', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/bike');
+    const title = page.locator('#bike-h'), stage = page.getByTestId('stage');
+    const headH = await page.locator('header.site-head').evaluate((h) => h.getBoundingClientRect().height);
+    const start = (await stage.boundingBox())!;
+    await expect(title).toBeInViewport();
+    expect(start.y).toBeGreaterThan(headH + 100); // the heading sits above the wall
+
+    // Scroll through the reel in steps: the wall's top only ever rises, and its bottom never moves.
+    const reel = await page.locator('#reel').evaluate((r: HTMLElement) => ({ top: r.offsetTop, h: r.offsetHeight }));
+    const end = reel.top + reel.h - 900;
+    let lastTop = start.y;
+    for (let i = 1; i <= 20; i++) {
+      await page.evaluate((y) => window.scrollTo(0, y), Math.round((end * i) / 20));
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      const b = (await stage.boundingBox())!;
+      expect(b.y).toBeLessThanOrEqual(lastTop + 0.5);
+      expect(Math.abs(b.y + b.height - (start.y + start.height))).toBeLessThan(1);
+      if (i <= 10) expect(b.y, 'the heading stays for the first half').toBeCloseTo(start.y, 0);
+      lastTop = b.y;
+    }
+    // At the end the wall sits just under the header, and the heading has gone.
+    expect(lastTop).toBeCloseTo(headH + 16, 0);
+    expect(await title.evaluate((h) => Number(getComputedStyle(h.parentElement!).opacity))).toBe(0);
+    expect((await title.boundingBox())!.y + (await title.boundingBox())!.height).toBeLessThanOrEqual(headH);
+
+    // Scrolling back brings it all back.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(title).toBeInViewport();
+    await expect.poll(async () => (await stage.boundingBox())!.y).toBeCloseTo(start.y, 0);
+  });
+
   test('works from the keyboard alone', async ({ page }) => {
     await page.goto('/bike');
     const first = page.getByRole('button', { name: 'Chainstays, Frame' });

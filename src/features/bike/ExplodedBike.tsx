@@ -13,7 +13,7 @@ import type { Build } from './build';
 import { clamp, ease, explodeOffset, fitViewBox, placeCard, type Box as VBox, type Rect } from './explode';
 import { separate, type Piece } from './layout';
 import { IDENTITY, TAP_ZOOM, ZOOM_OUT_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
-import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, type Pt } from './drawing';
+import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, shelfMarkup, type Pt } from './drawing';
 import { FRAGMENTS, PARTS, drawnFragments, inBuild, partInfo, partsFor, unitOf, type Fragment, type PartDef, type Swap } from './parts';
 import { motion } from '../../theme/tokens';
 import './bike.css';
@@ -153,6 +153,10 @@ export interface ExplodedBikeProps {
   /** Name the selected part in a fixed label centred above the drawing (its name and what it is)
       instead of floating the info card beside it. Ignored with a card host. Default false. */
   label?: boolean;
+  /** Centre the drawing in the stage, bench and all, instead of standing the bench on the stage's
+      bottom edge, so a stage centred on the page leaves equal space above and below the bike.
+      Default false. */
+  centred?: boolean;
   className?: string;
 }
 
@@ -229,17 +233,18 @@ function InfoCard({ partKey, lessonHref, build }: { partKey: string; lessonHref?
   );
 }
 
-/** The part label (AGENTS.md §5.1): a pale amber window centred above the drawing, holding the
+/** The part label (AGENTS.md §5.1): a white window with an amber hairline, centred above the drawing
+    (or, on portrait phones, just above the dock), holding the
     selected part's name and what it is. It shows only while a part is hovered or picked, and
     keeps one place and one size, so nothing jumps as the pointer moves across the bike. When the
     selection clears it fades out with its last words still in it. */
-function PartLabel({ partKey, build }: { partKey: string | null; build?: Build }) {
+export function PartLabel({ partKey, build, className }: { partKey: string | null; build?: Build; className?: string }) {
   const last = useRef<string | null>(null);
   if (partKey) last.current = partKey;
   const key = partKey ?? last.current;
   const p = key ? partInfo(key, build) : null;
   return (
-    <div className="bx-label" data-testid="part-label" role="status" aria-live="polite">
+    <div className={'bx-label' + (className ? ' ' + className : '')} data-testid="part-label" role="status" aria-live="polite">
       <div className="bx-label-win" data-testid="part-label-window" data-shown={partKey ? 'true' : 'false'} aria-hidden={partKey ? undefined : true}>
         {p && (
           <ReactFragment key={key}>
@@ -252,7 +257,7 @@ function PartLabel({ partKey, build }: { partKey: string | null; build?: Build }
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, label = false, build, className }: ExplodedBikeProps) {
+export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, label = false, centred = false, build, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
@@ -431,9 +436,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       benchRef.current?.setAttribute('transform', drop ? `translate(0 ${Math.round(drop)})` : '');
       box = { x, y, width, height: Math.max(height, BENCH_BOTTOM + drop - y) };
     }
-    const vb = fitViewBox(box, progress, aspect, bench);
+    const vb = fitViewBox(box, progress, aspect, bench && !centred);
     if (vb) { baseVb.current = vb; applyView(); }
-  }, [progress, size, bench, shown, leaving, vec, applyView]);
+  }, [progress, size, bench, centred, shown, leaving, vec, applyView]);
 
   /* Zoom gestures: pinch and drag on touch screens, double-tap to zoom in or back out, ctrl +
      wheel (trackpad pinch) on desktop. They act on the drawing only: the page never zooms or
@@ -742,7 +747,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           style={zoomable ? { touchAction: zoomed ? 'none' : 'pan-y' } : undefined}
           {...pointerHandlers}
         >
-          {bench && <g ref={benchRef} className="bx-bench" data-testid="bx-bench" dangerouslySetInnerHTML={{ __html: benchMarkup }} />}
+          {bench && <g ref={benchRef} className="bx-bench" data-testid="bx-bench" dangerouslySetInnerHTML={{ __html: centred ? shelfMarkup : benchMarkup }} />}
           <g ref={rootRef} className="bx-root">
             <g className="bx-ground" style={{ opacity: clamp(1 - progress * 3) }} dangerouslySetInnerHTML={{ __html: groundMarkup }} />
             {shown.map((f) => {
