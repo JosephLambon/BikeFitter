@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IDENTITY, MAX_ZOOM, panBy, zoomAt, zoomBetween, zoomViewBox } from './zoom';
+import { IDENTITY, MAX_ZOOM, TAP_ZOOM, panBy, zoomAt, zoomBetween, zoomViewBox } from './zoom';
 
 const base: [number, number, number, number] = [0, 0, 400, 200];
 
@@ -45,5 +45,17 @@ describe('zooming back out', () => {
     const widths = [0, 0.25, 0.5, 0.75, 1].map((k) => zoomViewBox(base, zoomBetween(from, IDENTITY, k))[2]);
     for (let i = 1; i < widths.length; i++) expect(widths[i]).toBeGreaterThan(widths[i - 1]);
     expect(widths[2]).toBeCloseTo((400 / 2.5 + 400) / 2, 0); // halfway in width at halfway
+  });
+});
+
+describe('zooming in on a double-tap', () => {
+  it.each([[0.2, 0.3], [0.5, 0.5], [0.8, 0.6]])('keeps the tapped spot (%s, %s) still on every frame of the glide', (px, py) => {
+    const to = zoomAt(IDENTITY, TAP_ZOOM, px, py);
+    for (const k of [0, 0.1, 0.35, 0.6, 0.9, 1]) {
+      const z = zoomBetween(IDENTITY, to, k);
+      // Where the tapped base point (px, py) shows on screen, as a fraction of the visible view.
+      expect((px - z.fx) * z.s).toBeCloseTo(px, 6);
+      expect((py - z.fy) * z.s).toBeCloseTo(py, 6);
+    }
   });
 });

@@ -33,11 +33,12 @@ export const panBy = (z: Zoom, dx: number, dy: number): Zoom => fit({ s: z.s, fx
 
 export const isZoomed = (z: Zoom) => z.s > 1.001;
 
-/** How long zooming back out takes: quick, so it still feels like a snap. */
-export const ZOOM_OUT_MS = 240;
+/** How long a zoom glide takes, in or out: quick, so it still feels like a snap. */
+export const ZOOM_MS = 240;
 
 /** The zoom `k` of the way (0..1) from `a` to `b`. The visible view's width and origin move in a
-    straight line, so the drawing glides without swinging sideways. */
+    straight line, so the drawing glides without swinging sideways, and a point that sits at the
+    same place on screen in `a` and `b` (the spot a double-tap zooms on) stays there throughout. */
 export function zoomBetween(a: Zoom, b: Zoom, k: number): Zoom {
   const t = Math.max(0, Math.min(1, k));
   const w = 1 / a.s + (1 / b.s - 1 / a.s) * t;

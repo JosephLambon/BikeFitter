@@ -480,6 +480,71 @@ test.describe('Phone, portrait', () => {
     await expect.poll(() => viewBoxWidth(page)).toBe(before);
   });
 
+  /** Records the viewBox width on every frame for `ms`, from now. */
+  const recordWidths = (page: Page, ms: number) => page.evaluate((ms) => {
+    const w = window as unknown as { widths: [number, number][] };
+    w.widths = [];
+    const svg = document.querySelector('.bx-svg')!, t0 = performance.now();
+    const tick = () => {
+      w.widths.push([performance.now() - t0, +svg.getAttribute('viewBox')!.split(' ')[2]]);
+      if (performance.now() - t0 < ms) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, ms);
+  const recorded = (page: Page) => page.evaluate(() => (window as unknown as { widths: [number, number][] }).widths);
+
+  test('a double-tap zooms in with the same short glide as zooming out, keeping the tapped spot under the finger', async ({ page }) => {
+    await page.goto('/bike');
+    await page.waitForTimeout(300);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const before = await viewBoxWidth(page);
+    const x = b.x + 30, y = b.y + 30; // empty bench wall, not a part
+    // The drawing's point under the finger, in drawing units.
+    const under = () => page.locator('.bx-svg').evaluate((svg: SVGSVGElement, [x, y]) => {
+      const p = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM()!.inverse());
+      return [p.x, p.y];
+    }, [x, y]);
+    const start = await under();
+    await recordWidths(page, 800);
+    await page.touchscreen.tap(x, y); await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(850);
+    const frames = await recorded(page);
+    const widths = frames.map(([, w]) => w);
+    const zoomedW = widths[widths.length - 1];
+    expect(zoomedW).toBeLessThan(before / 2);
+    const between = widths.filter((w) => w < before - 1 && w > zoomedW + 1);
+    expect(between.length, 'several frames in between: an animation, not a jump').toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < widths.length; i++) expect(widths[i]).toBeLessThanOrEqual(widths[i - 1]); // only ever zooms in
+    const first = frames.find(([, w]) => w < before - 1)!, last = frames.find(([, w]) => w <= zoomedW + 0.1)!;
+    expect(last[0] - first[0], 'snappy').toBeLessThan(400);
+    const end = await under();
+    expect(Math.hypot(end[0] - start[0], end[1] - start[1]), 'the tapped spot stays put').toBeLessThan(2);
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
+
+    // And back out the same way.
+    await recordWidths(page, 800);
+    await page.touchscreen.tap(x, y); await page.touchscreen.tap(x, y);
+    await page.waitForTimeout(850);
+    const out = (await recorded(page)).map(([, w]) => w);
+    expect(out.filter((w) => w > zoomedW + 1 && w < before - 1).length).toBeGreaterThanOrEqual(3);
+    expect(out[out.length - 1]).toBe(before);
+  });
+
+  test('with reduced motion a double-tap zooms in at once', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/bike');
+    await page.waitForTimeout(300);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const before = await viewBoxWidth(page);
+    await recordWidths(page, 500);
+    await page.touchscreen.tap(b.x + 30, b.y + 30); await page.touchscreen.tap(b.x + 30, b.y + 30);
+    await page.waitForTimeout(550);
+    const widths = (await recorded(page)).map(([, w]) => w);
+    const zoomedW = widths[widths.length - 1];
+    expect(zoomedW).toBeLessThan(before / 2);
+    expect(widths.filter((w) => w < before - 1 && w > zoomedW + 1)).toEqual([]);
+  });
+
   test('scrolling never takes the bike apart: only the button and slider do', async ({ page }) => {
     await page.goto('/bike');
     await page.evaluate(() => { window.scrollTo(0, 2000); window.dispatchEvent(new Event('scroll')); });

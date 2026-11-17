@@ -12,7 +12,7 @@ import { SOURCES } from '../../content/sources';
 import type { Build } from './build';
 import { clamp, ease, explodeOffset, fitViewBox, placeCard, type Box as VBox, type Rect } from './explode';
 import { separate, type Piece } from './layout';
-import { IDENTITY, TAP_ZOOM, ZOOM_OUT_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
+import { IDENTITY, TAP_ZOOM, ZOOM_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
 import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, shelfMarkup, type Pt } from './drawing';
 import { FRAGMENTS, PARTS, drawnFragments, inBuild, partInfo, partsFor, unitOf, type Fragment, type PartDef, type Swap } from './parts';
 import { motion } from '../../theme/tokens';
@@ -296,23 +296,29 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)', { noSsr: true });
   const motionOk = !reduce && canAnimate();
 
-  /* Back to the whole bike: a quick ease-out zoom, not a jump. The Reset chip goes at once. */
-  const zoomOut = useCallback(() => {
-    if (!motionOk || !isZoomed(zoom.current)) { commitZoom(IDENTITY); return; }
+  /* A quick ease-out glide to another zoom, not a jump: back to the whole bike (Reset zoom, a
+     double-tap while zoomed), or in to where a double-tap landed. The spot under the finger stays
+     put all the way (zoomBetween). Zooming out, the Reset chip goes at once; zooming in, it comes
+     when the glide ends. Instant with reduced motion. */
+  const zoomTo = useCallback((to: Zoom) => {
+    if (!motionOk) { commitZoom(to); return; }
     stopZoomAnim();
     const from = zoom.current;
-    setZoomed(false);
+    if (!isZoomed(to)) setZoomed(false);
     let start: number | null = null;
     const step = (ts: number) => {
       if (start === null) start = ts;
-      const k = clamp((ts - start) / ZOOM_OUT_MS);
-      if (k >= 1) { zoomAnim.current = 0; commitZoom(IDENTITY); return; }
-      zoom.current = zoomBetween(from, IDENTITY, 1 - Math.pow(1 - k, 3));
+      const k = clamp((ts - start) / ZOOM_MS);
+      if (k >= 1) { zoomAnim.current = 0; commitZoom(to); return; }
+      zoom.current = zoomBetween(from, to, 1 - Math.pow(1 - k, 3));
       applyView();
       zoomAnim.current = requestAnimationFrame(step);
     };
     zoomAnim.current = requestAnimationFrame(step);
   }, [motionOk, commitZoom, stopZoomAnim, applyView]);
+  const zoomOut = useCallback(() => {
+    if (isZoomed(zoom.current)) zoomTo(IDENTITY); else commitZoom(IDENTITY);
+  }, [zoomTo, commitZoom]);
   useEffect(() => stopZoomAnim, [stopZoomAnim]);
   const targetDepth = build?.rims === 'deep' ? 1 : 0;
   const [depth, setDepth] = useState(targetDepth);
@@ -496,7 +502,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
         e.preventDefault(); // a double-tap zooms; it doesn't also select
         const f = frac(t.clientX, t.clientY);
         if (isZoomed(zoom.current)) zoomOut();
-        else commitZoom(zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
+        else zoomTo(zoomAt(zoom.current, TAP_ZOOM, f.fx, f.fy));
         lastTap = null;
       } else lastTap = { t: now, x: t.clientX, y: t.clientY };
     };
@@ -549,7 +555,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
       svg.removeEventListener('pointerdown', onDown); svg.removeEventListener('pointermove', onDragMove);
       svg.removeEventListener('pointerup', onUp); svg.removeEventListener('pointercancel', onUp);
     };
-  }, [zoomable, applyView, commitZoom, zoomOut, stopZoomAnim]);
+  }, [zoomable, applyView, commitZoom, zoomOut, zoomTo, stopZoomAnim]);
 
 
   /* Play the swap: departures first, then arrivals; leaving parts are dropped once they have gone. */
