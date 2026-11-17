@@ -59,6 +59,25 @@
 .bx-card { position: absolute; z-index: 2; width: min(300px, 90%); pointer-events: none; }
 .bx-card a { pointer-events: auto; }
 
+/* Part label (ExplodedBike `label`): a fixed band above the drawing, so the bike never moves and the
+   words never cover it. In it, a pale amber window (Bike tint, a soft amber hairline and the window
+   shadow) that shows only while a part is hovered or picked. It keeps one size for every part (two
+   lines of description fit) and fades out with its last words when the selection clears. */
+.bx.bx--label { display: flex; flex-direction: column; }
+.bx.bx--label > .bx-stage { flex: 1; min-height: 0; height: auto; }
+.bx-label { flex: none; height: 128px; padding: 4px 16px 0; display: flex; justify-content: center; align-items: flex-start; pointer-events: none; }
+.bx-label-win { width: min(460px, 100%); height: 104px; padding: 16px 22px; border-radius: 12px; text-align: center;
+  background: var(--bike-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bike) 40%, transparent), var(--shadow);
+  transition: opacity .2s ease, transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.bx-label-win[data-shown="false"] { opacity: 0; visibility: hidden; transform: translateY(4px) scale(.98);
+  transition: opacity .2s ease, transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s .3s; }
+.bx-label-name { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.3; color: var(--ink); }
+.bx-label-what { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--ink); text-wrap: balance; }
+.bx-label-win > * { animation: bx-label-in .28s cubic-bezier(.2, .8, .2, 1) both; }
+.bx-label-win > .bx-label-what { animation-delay: .04s; }
+@keyframes bx-label-in { from { opacity: 0; transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .bx-label-win, .bx-label-win[data-shown="false"] { transition: none; transform: none; } .bx-label-win > * { animation: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   .bx-part, .bx-ground, .bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: none; }
 }

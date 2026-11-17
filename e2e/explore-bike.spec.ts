@@ -13,12 +13,11 @@ test.describe('Explore the bike', () => {
     await expect(page.getByRole('button', { name: 'Put the bike back together' })).toBeVisible();
     expect(await page.evaluate(() => window.scrollY)).toBe(before);
 
-    // Select a part: it goes amber and the info card explains it, with its source.
+    // Select a part: it goes amber and the label above the bike says what it is.
     await page.getByRole('button', { name: 'Pedals, Contact points' }).click();
-    const card = page.getByRole('status');
-    await expect(card.getByRole('heading', { name: 'Pedals' })).toBeVisible();
-    await expect(card.getByText('Why it matters for fit.')).toBeVisible();
-    await expect(card.getByRole('link', { name: /Cyclefit/ })).toBeVisible();
+    const label = page.getByRole('status').filter({ has: page.getByRole('heading', { name: 'Pedals' }) });
+    await expect(label).toBeVisible();
+    await expect(label).toContainText('Clipless road pedals');
     await expect(page.locator('.bx-part.is-active[data-part="pedals"]').first()).toBeVisible();
   });
 
@@ -38,7 +37,7 @@ test.describe('Explore the bike', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status')).toContainText('Seat stays');
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('status')).toBeEmpty();
+    await expect(page.getByTestId('part-label-window')).toBeHidden(); // the window fades away
   });
 });
 

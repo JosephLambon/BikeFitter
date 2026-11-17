@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectScrubberAligned } from './scrubber.js';
+import { eachPart, takeApart, viewBox } from './bike.js';
 
-/* Regressions for the exploded layout, the info-card rule, the build swaps, zoom and the phone
+/* Regressions for the exploded layout, the part label, the build swaps, zoom and the phone
    layouts (AGENTS.md §5.1). */
 
 /** Every point on the stage where two different pieces are drawn on top of each other. Parts in
@@ -28,12 +29,6 @@ function overlaps(page: Page) {
   });
 }
 
-async function takeApart(page: Page) {
-  await page.getByRole('button', { name: 'Take the bike apart' }).click();
-  await expect(page.getByRole('slider', { name: 'How far apart the bike is' })).toHaveAttribute('aria-valuetext', 'Fully apart');
-  await page.waitForTimeout(250);
-}
-
 test.describe('Exploded layout', () => {
   test('no two parts overlap when the bike is fully apart', async ({ page }) => {
     await page.goto('/bike');
@@ -54,107 +49,75 @@ test.describe('Exploded layout', () => {
   });
 });
 
-/** Selects each part in turn from the keyboard and calls `check` with its key. */
-async function eachPart(page: Page, check: (key: string) => Promise<void>) {
-  const n = await page.locator('.bx-part[role="button"]').count();
-  await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
-  const seen = new Set<string>();
-  for (let i = 0; i < n; i++) {
-    if (i) await page.keyboard.press('ArrowRight');
-    const key = await page.evaluate(() => document.activeElement!.getAttribute('data-part')!);
-    await expect(page.locator(`.bx-part.is-active[data-part="${key}"]`).first()).toBeAttached();
-    seen.add(key);
-    await check(key);
-  }
-  expect(seen.size).toBe(n); // every part was checked
-}
+test.describe('Part label (bikeLabel on)', () => {
+  /** Waits for the window to finish fading in. */
+  const settled = (page: Page) => page.getByTestId('part-label-window').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  /** The label window's box, its text, and every drawn part its band overlaps. */
+  const read = (page: Page) => page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('[data-testid="part-label-window"]')!;
+    const band = document.querySelector<HTMLElement>('[data-testid="part-label"]')!.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const hits = new Set<string>();
+    for (const g of document.querySelectorAll<SVGGElement>('.bx-part:not(.is-leaving)')) {
+      const b = g.getBoundingClientRect();
+      if (b.width && band.left < b.right && band.right > b.left && band.top < b.bottom && band.bottom > b.top) hits.add(g.dataset.part!);
+    }
+    return { box: [r.left, r.top, r.width, r.height].map(Math.round).join(' '), text: el.textContent!, hits: [...hits], align: getComputedStyle(el).textAlign };
+  });
 
-/** Is every copy of the part (one per fragment: a tyre on each wheel) under the card? */
-const cardHidesPart = (page: Page, key: string) => page.evaluate((k) => {
-  const card = document.querySelector('.bx-card')!.getBoundingClientRect();
-  const byFrag = new Map<string, boolean>();
-  for (const g of document.querySelectorAll<SVGGElement>(`.bx-part[data-part="${k}"]`)) {
-    const r = g.getBoundingClientRect();
-    const hit = card.left < r.right && card.right > r.left && card.top < r.bottom && card.bottom > r.top;
-    byFrag.set(g.dataset.frag!, (byFrag.get(g.dataset.frag!) ?? false) || hit);
-  }
-  return [...byFrag.values()].every(Boolean);
-}, key);
-
-const viewBox = (page: Page) => page.locator('.bx-svg').getAttribute('viewBox');
-
-test.describe('Info card rule', () => {
-  /** Returns the parts the card hid completely. */
-  async function hiddenParts(page: Page) {
-    const hidden: string[] = [];
-    await eachPart(page, async (key) => {
-      await page.waitForTimeout(60); // the card is placed after selection
-      if (await cardHidesPart(page, key)) hidden.push(key);
-    });
-    return hidden;
-  }
-
-  for (const [w, h] of [[1280, 800], [1440, 900], [1920, 1080]]) {
-    test(`never hides the selected part when the bike is together (${w}×${h})`, async ({ page }) => {
+  for (const [w, h] of [[820, 900], [1280, 800], [1920, 1080]]) {
+    test(`stays in one place above the bike, names every part there and never covers the drawing (${w}×${h})`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await page.goto('/bike');
-      expect(await hiddenParts(page)).toEqual([]);
+      await expect(page.locator('.bx-card')).toHaveCount(0);
+      await expect(page.getByTestId('part-label-window')).toBeHidden();
+      await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
+      await expect(page.getByTestId('part-label-window')).toBeVisible();
+      await settled(page);
+      const first = await read(page);
+      const vb = await viewBox(page);
+      await eachPart(page, async (key) => {
+        const name = await page.locator(`.bx-part[data-part="${key}"][role="button"]`).getAttribute('aria-label');
+        await expect(page.getByTestId('part-label')).toContainText(name!.split(',')[0]);
+        const now = await read(page);
+        expect(now.box).toBe(first.box);
+        expect(now.hits).toEqual([]);
+        expect(now.align).toBe('center');
+        expect(await viewBox(page)).toBe(vb);
+      });
+      const box = (await page.getByTestId('part-label').boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(w);
     });
   }
 
-  test('never hides the selected part when the bike is apart', async ({ page }) => {
+  test('never covers the drawing when the bike is apart', async ({ page }) => {
     await page.goto('/bike');
     await takeApart(page);
-    expect(await hiddenParts(page)).toEqual([]);
+    await eachPart(page, async () => { expect((await read(page)).hits).toEqual([]); });
   });
 
-  test('selecting a part never zooms or moves the drawing', async ({ page }) => {
+  test('the window shows only while a part is hovered or picked, and hovering changes only the words', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/bike');
-    const before = await viewBox(page);
-    await eachPart(page, async () => {
-      await page.waitForTimeout(40);
-      expect(await viewBox(page)).toBe(before);
-    });
-    await page.waitForTimeout(500);
-    expect(await viewBox(page)).toBe(before);
+    const win = page.getByTestId('part-label-window');
+    await expect(win).toBeHidden();
+    await page.locator('.bx-part[data-part="saddle"]').first().hover();
+    await expect(win).toBeVisible();
+    await settled(page);
+    const before = await read(page);
+    await expect(page.getByTestId('part-label')).toContainText('Saddle');
+    await expect(page.getByTestId('part-label')).toContainText('Where you sit');
+    await page.locator('.bx-part[data-part="fork"]').first().hover();
+    await expect(page.getByTestId('part-label')).toContainText('Fork');
+    expect((await read(page)).box).toBe(before.box);
+    await page.mouse.move(2, 2);
+    await expect(win).toBeHidden();
+    await page.locator('.bx-part[data-part="saddle"]').first().click();
+    await page.mouse.move(2, 2);
+    await expect(win).toBeVisible();
+    await expect(win).toContainText('Saddle');
   });
-
-  // Between phone and desktop widths the card once docked into nothing and vanished.
-  for (const w of [600, 640, 680, 720, 761, 780, 800, 840]) {
-    test(`the card is on screen and readable at ${w} px`, async ({ page }) => {
-      await page.setViewportSize({ width: w, height: 900 });
-      await page.goto('/bike');
-      await page.getByRole('button', { name: 'Saddle, Contact points' }).focus();
-      const card = page.getByRole('status');
-      await expect(card).toContainText('Where you sit');
-      await card.evaluate((el) => Promise.all(el.getAnimations().map((x) => x.finished))); // the card rises into place
-      const c = (await card.boundingBox())!;
-      expect(c.width).toBeGreaterThan(240);
-      expect(c.height).toBeGreaterThan(120);
-      expect(c.x).toBeGreaterThanOrEqual(0);
-      expect(c.x + c.width).toBeLessThanOrEqual(w);
-      // The card, or (on phones) the drawer it scrolls in, is wholly on screen.
-      const drawer = page.getByTestId('drawer');
-      const box = (await drawer.count()) ? (await drawer.boundingBox())! : c;
-      expect(box.y + box.height).toBeLessThanOrEqual(900);
-      // Nothing clips it: every ancestor that clips its overflow contains the whole card.
-      const clipped = await card.evaluate((el) => {
-        const r = el.getBoundingClientRect(), out: string[] = [];
-        for (let a = el.parentElement; a; a = a.parentElement) {
-          const cs = getComputedStyle(a);
-          if (cs.display === 'none' || cs.visibility === 'hidden') out.push('hidden ' + a.className);
-          if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
-          // In the phone drawer the card scrolls inside the drawer's own scroll box, by design.
-          if (a.dataset.testid === 'card-slot' && cs.overflowY === 'auto') break;
-          const b = a.getBoundingClientRect();
-          if (r.left < b.left - 1 || r.right > b.right + 1 || r.top < b.top - 1 || r.bottom > b.bottom + 1) out.push(a.className);
-        }
-        return out;
-      });
-      expect(clipped).toEqual([]);
-    });
-  }
 });
 
 test.describe('Build swaps', () => {

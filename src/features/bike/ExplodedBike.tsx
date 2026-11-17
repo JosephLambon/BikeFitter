@@ -4,7 +4,7 @@
    With a `build`, only that build's parts are drawn, and changing it plays a swap: leaving parts
    fly, roll or retract away, arriving ones follow, and deeper rims grow while the wheels spin. */
 import { createPortal } from 'react-dom';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
+import { Fragment as ReactFragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -150,6 +150,9 @@ export interface ExplodedBikeProps {
   /** Dock the info card here (portalled) instead of floating it over the drawing. Pass null
       while the host is mounting: the card waits for it rather than floating. */
   cardHost?: HTMLElement | null;
+  /** Name the selected part in a fixed label centred above the drawing (its name and what it is)
+      instead of floating the info card beside it. Ignored with a card host. Default false. */
+  label?: boolean;
   className?: string;
 }
 
@@ -226,7 +229,30 @@ function InfoCard({ partKey, lessonHref, build }: { partKey: string; lessonHref?
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, build, className }: ExplodedBikeProps) {
+/** The part label (AGENTS.md §5.1): a pale amber window centred above the drawing, holding the
+    selected part's name and what it is. It shows only while a part is hovered or picked, and
+    keeps one place and one size, so nothing jumps as the pointer moves across the bike. When the
+    selection clears it fades out with its last words still in it. */
+function PartLabel({ partKey, build }: { partKey: string | null; build?: Build }) {
+  const last = useRef<string | null>(null);
+  if (partKey) last.current = partKey;
+  const key = partKey ?? last.current;
+  const p = key ? partInfo(key, build) : null;
+  return (
+    <div className="bx-label" data-testid="part-label" role="status" aria-live="polite">
+      <div className="bx-label-win" data-testid="part-label-window" data-shown={partKey ? 'true' : 'false'} aria-hidden={partKey ? undefined : true}>
+        {p && (
+          <ReactFragment key={key}>
+            <h3 className="bx-label-name">{p.name}</h3>
+            <p className="bx-label-what">{p.what}</p>
+          </ReactFragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, label = false, build, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
@@ -565,12 +591,14 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   /* With a card host (phones), the card always docks there; otherwise it always floats. One
      source of truth, so no width can leave the card nowhere. */
   const docked = cardHost !== undefined;
+  // The fixed label replaces the floating card on larger screens; phones keep their docked card.
+  const labelled = label && interactive && !docked;
 
   /* Place the card again whenever its own size changes (a web font arriving, copy changing). */
   const [cardTick, setCardTick] = useState(0);
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || docked || typeof ResizeObserver === 'undefined') return;
+    if (!el || docked || labelled || typeof ResizeObserver === 'undefined') return;
     let last = '';
     const ro = new ResizeObserver(() => {
       const k = el.offsetWidth + 'x' + el.offsetHeight;
@@ -578,13 +606,13 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [docked]);
+  }, [docked, labelled]);
 
   /* The card rule (AGENTS.md §5.1): avoid the selected part, and cover as few other parts as
      possible. When no shape misses the part, the card takes the place that covers least; the
      drawing itself never moves or zooms for the card. */
   useLayoutEffect(() => {
-    if (!interactive || !active || docked) { setCardPos(null); return; }
+    if (!interactive || !active || docked || labelled) { setCardPos(null); return; }
     const hostEl = hostRef.current!;
     const host = hostEl.getBoundingClientRect();
     const stage = hostEl.querySelector('.bx-stage')!.getBoundingClientRect();
@@ -620,7 +648,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     el.style.width = pos.width + 'px'; // React won't re-apply an unchanged style, so leave the chosen width set
     lastCard.current = { key: active, pos };
     setCardPos(pos);
-  }, [interactive, active, docked, progress, size, vectors, zoomTick, build, cardTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [interactive, active, docked, labelled, progress, size, vectors, zoomTick, build, cardTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Escape clears the selection from anywhere. */
   useEffect(() => {
@@ -700,8 +728,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   return (
     <div
       ref={hostRef}
-      className={['bx', interactive && 'bx--interactive', active && 'has-active', docked && 'bx--docked', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
+      className={['bx', interactive && 'bx--interactive', active && 'has-active', docked && 'bx--docked', labelled && 'bx--label', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
     >
+      {labelled && <PartLabel partKey={active} build={build} />}
       <div className="bx-stage">
         <svg
           ref={svgRef}
@@ -750,7 +779,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           <button type="button" className="bx-zoom-reset" onClick={zoomOut}>Reset zoom</button>
         )}
       </div>
-      {docked ? (cardHost ? createPortal(card, cardHost) : null) : card}
+      {docked ? (cardHost ? createPortal(card, cardHost) : null) : labelled ? null : card}
     </div>
   );
 }

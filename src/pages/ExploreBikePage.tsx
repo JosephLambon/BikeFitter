@@ -205,7 +205,7 @@ export function ExploreBikePage() {
     >
       <ExplodedBike
         progress={progress} bench zoomable build={buildOn ? build : undefined}
-        cardHost={compact ? cardHost : undefined} onSelect={onSelect}
+        cardHost={compact ? cardHost : undefined} label={!compact && isEnabled('bikeLabel')} onSelect={onSelect}
       />
     </Box>
   );

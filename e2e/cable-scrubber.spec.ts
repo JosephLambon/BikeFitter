@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { expectScrubberAligned } from './scrubber.js';
 
 /* The cable explode scrubber, which ships while the `bikeCoil` flag is off. Runs in the
-   "cable" project (playwright.config.ts), against a server with that flag off. */
+   "flags-off" project (playwright.config.ts), against a server with that flag off. */
 
 test.describe('Cable scrubber (bikeCoil off)', () => {
   test('the grip and nudge arrow sit on the cable’s end, level with it, on a desktop', async ({ page }) => {
