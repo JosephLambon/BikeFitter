@@ -268,9 +268,18 @@ describe('Explore the bike on a portrait phone', () => {
     expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('dock')).toBeInTheDocument();
     const slot = screen.getByTestId('label-slot');
-    expect(within(slot).getByTestId('part-hint')).toHaveTextContent('Tap a part to learn more. Pinch the drawing to zoom.');
+    expect(within(slot).getByTestId('part-hint')).toHaveTextContent('Tap a part to learn more. Pinch to zoom.');
     expect(within(slot).getByTestId('part-hint')).toHaveStyle({ opacity: '1' });
     expect(within(slot).getByTestId('part-label-window')).toHaveAttribute('data-shown', 'false');
+  });
+
+  it('bikeThumbLabel: a narrow window with a mouse is told to hover, not tap or pinch', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 760px)' || query === '(hover: hover)', media: query, onchange: null,
+      addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+    }));
+    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: true });
+    expect(within(screen.getByTestId('label-slot')).getByTestId('part-hint')).toHaveTextContent('Hover a part to learn more.');
   });
 
   it('bikeThumbLabel: picking a part shows only its name and what it is; picking it again lets it go', async () => {

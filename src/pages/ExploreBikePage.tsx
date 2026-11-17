@@ -177,6 +177,11 @@ export function ExploreBikePage() {
     if (o) setOpen(false);
   }, []);
   const hint = (canHover ? 'Hover a part to learn more.' : 'Tap a part to learn more.') + (canHover ? '' : ' Pinch to zoom.');
+  // Turning a phone (or resizing a window) across layouts mounts the drawing again with nothing
+  // picked, so let go of the page's pick too: the label never names a part that isn't picked.
+  const layout = land ? 'landscape' : thumb ? 'thumb' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide';
+  const [seenLayout, setSeenLayout] = useState(layout);
+  if (layout !== seenLayout) { setSeenLayout(layout); setSelected(null); }
   // The bouncing scroll cue turns into the hint as the bike starts to come apart. Where scroll
   // does nothing (a phone, or reduced motion) there is no cue, only the hint.
   const cue = (
@@ -239,8 +244,13 @@ export function ExploreBikePage() {
         // Short screens give a little more of the height to the drawer's space, for the build tray.
         ...(docked && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none', [SHORT]: { maxHeight: '38svh' } }),
         // The label at the thumb: a definite size (the bike's 4:3, as wide as the screen allows under
-        // the same height cap), so the grid can centre it and nothing on the wall can resize it.
-        ...(thumb && { p: '4px', width: 'min(100%, 42svh * 4 / 3)', maxHeight: 'none', [SHORT]: { width: 'min(100%, 38svh * 4 / 3)', maxHeight: 'none' } }),
+        // the same height cap), so the grid can centre it and nothing on the wall can resize it. On a
+        // small phone it also shrinks to leave the label's space and 16 px of wall above and below
+        // (cqh: the wall's height; the wall is a size container).
+        ...(thumb && {
+          p: '4px', maxHeight: 'none', width: `min(100%, 42svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)`,
+          [SHORT]: { maxHeight: 'none', width: `min(100%, 38svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)` },
+        }),
         '& .bx-card:not(:empty)': { animation: `bf-rise .5s ${motion.rise}` },
         '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
       }}
@@ -352,7 +362,7 @@ export function ExploreBikePage() {
       >
         <Box
           ref={layoutRef}
-          data-layout={land ? 'landscape' : thumb ? 'thumb' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide'}
+          data-layout={layout}
           sx={{
             position: 'sticky', top: 0, height: '100svh', display: 'grid', overflow: 'hidden',
             ...(!compact && {
@@ -421,7 +431,7 @@ export function ExploreBikePage() {
                   the label's row, and auto-placement would push it into a second column. */}
               <Box
                 data-testid="wall"
-                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', minHeight: 0, background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}
+                sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', minHeight: 0, containerType: 'size', background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}
               >
                 <Box sx={{ gridArea: '2 / 1', minHeight: 0 }}>{stage}</Box>
                 <Box
@@ -436,7 +446,7 @@ export function ExploreBikePage() {
                     style={{ opacity: selected ? 0 : 1 }}
                     sx={{ m: 0, pb: '8px', textAlign: 'center', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.45, transition: 'opacity .2s ease', [`@media ${REDUCED}`]: { transition: 'none' } }}
                   >
-                    Tap a part to learn more. Pinch the drawing to zoom.
+                    {hint}
                   </Typography>
                   <PartLabel partKey={selected} build={buildOn ? build : undefined} className="bx-label--thumb" />
                 </Box>

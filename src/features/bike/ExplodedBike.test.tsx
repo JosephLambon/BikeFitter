@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ExplodedBike } from './ExplodedBike';
+import { ExplodedBike, PartLabel } from './ExplodedBike';
 import { DEFAULT_BUILD } from './build';
 import { partsFor } from './parts';
 
@@ -67,6 +67,17 @@ describe('ExplodedBike', () => {
     expect(card()).toHaveTextContent('Fork');
     fireEvent.pointerLeave(part('Fork').closest('svg')!, { pointerType: 'mouse' });
     expect(card()).toBeEmptyDOMElement();
+  });
+
+  it('the part label puts fresh words in its live region each time a part is picked, even the same part again', () => {
+    const { rerender } = render(<PartLabel partKey="saddle" />);
+    const first = screen.getByRole('heading', { name: 'Saddle' });
+    rerender(<PartLabel partKey={null} />);
+    rerender(<PartLabel partKey="saddle" />);
+    const again = screen.getByRole('heading', { name: 'Saddle' });
+    expect(again).not.toBe(first); // new nodes, so screen readers announce it again
+    rerender(<PartLabel partKey="saddle" />);
+    expect(screen.getByRole('heading', { name: 'Saddle' })).toBe(again); // but not on every render
   });
 
   describe('with the part label', () => {

@@ -370,21 +370,53 @@ test.describe('Phone, portrait', () => {
     expect(await box(page, 'stage')).toEqual(stage);
   });
 
-  test('every part’s name and description fit the label on a short phone', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('on a small phone (320×568) everything still fits: the bike shrinks, the label and dock stay whole', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
     await page.goto('/bike');
-    const parts = page.locator('.bx-part[role="button"]');
-    await parts.first().focus();
-    const seen = new Set<string>();
-    for (let k = 0; k < 80; k++) {
-      const name = (await page.getByTestId('part-label-window').locator('h3').textContent())!;
-      if (seen.has(name)) break;
-      seen.add(name);
-      expect(await page.getByTestId('part-label-window').evaluate((el) => el.scrollHeight <= el.clientHeight), name).toBe(true);
-      await page.keyboard.press('ArrowRight');
-    }
-    expect(seen.size).toBeGreaterThan(20);
+    const wall = await box(page, 'wall'), stage = await box(page, 'stage'), slot = await box(page, 'label-slot'), dock = await box(page, 'dock');
+    expect(stage.height / stage.width).toBeCloseTo(0.75, 1);
+    expect(stage.y).toBeGreaterThanOrEqual(wall.y + 8);
+    expect(slot.y).toBeGreaterThanOrEqual(stage.y + stage.height + 8);
+    expect(Math.abs(slot.y + slot.height - dock.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dock.y + dock.height - 568)).toBeLessThanOrEqual(1);
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await expect(page.getByTestId('part-label-window')).toBeInViewport({ ratio: 1 });
   });
+
+  test('turning the phone lets go of a picked part, so the label never names a part that isn’t picked', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto('/bike');
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
+    await expect(page.getByTestId('part-label-window')).toBeHidden();
+    await expect(page.getByTestId('part-hint')).toBeInViewport();
+    await expect(page.locator('.bx-part.is-active')).toHaveCount(0);
+  });
+
+  for (const [label, changed] of [['the standard build', false], ['a fully changed build', true]] as const) {
+    test(`every part’s name and description fit the label on a small phone, with ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.goto('/bike');
+      if (changed) {
+        await page.getByRole('button', { name: /^Build/ }).click();
+        const tray = page.getByTestId('build-tray');
+        for (const [opt, pick] of [['Gears', 'Electronic'], ['Brakes', 'Rim'], ['Rims', 'Deep'], ['Chainrings', 'One (1×)'], ['Mudguards', 'On']]) {
+          await tray.getByRole('radiogroup', { name: opt }).getByRole('radio', { name: pick }).click();
+        }
+        await page.getByRole('button', { name: /^Build/ }).click();
+        await page.waitForTimeout(800);
+      }
+      const n = await page.locator('.bx-part[role="button"]').count();
+      await page.locator('.bx-part[role="button"][tabindex="0"]').focus();
+      for (let k = 0; k < n; k++) {
+        const win = page.getByTestId('part-label-window');
+        const name = (await win.locator('h3').textContent())!;
+        expect(await win.evaluate((el) => el.scrollHeight <= el.clientHeight), name).toBe(true);
+        await page.keyboard.press('ArrowRight');
+      }
+    });
+  }
 
   test('in the dock, the grip sits on the coil’s end, level with it', async ({ page }) => {
     await page.goto('/bike');
@@ -528,6 +560,28 @@ test.describe('Phone, portrait', () => {
     const out = (await recorded(page)).map(([, w]) => w);
     expect(out.filter((w) => w > zoomedW + 1 && w < before - 1).length).toBeGreaterThanOrEqual(3);
     expect(out[out.length - 1]).toBe(before);
+  });
+
+  test('a touch during the zoom-in glide leaves the drawing zoomed where it stopped, with Reset zoom and panning', async ({ page }) => {
+    await page.goto('/bike');
+    await page.waitForTimeout(300);
+    const b = (await page.locator('.bx-svg').boundingBox())!;
+    const before = await viewBoxWidth(page);
+    const x = b.x + 30, y = b.y + 30;
+    const cdp = await page.context().newCDPSession(page);
+    const tap = async () => {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await tap(); await tap();
+    await page.waitForTimeout(80); // part-way through the 240 ms glide
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x + 60, y: y + 60, id: 2 }] });
+    await page.waitForTimeout(400);
+    const w = await viewBoxWidth(page);
+    expect(w).toBeLessThan(before - 1); // it stopped part-way in
+    await expect(page.getByRole('button', { name: 'Reset zoom' })).toBeVisible();
+    expect(await page.locator('.bx-svg').evaluate((s) => (s as SVGSVGElement).style.touchAction)).toBe('none');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   });
 
   test('with reduced motion a double-tap zooms in at once', async ({ page }) => {

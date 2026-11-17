@@ -240,6 +240,10 @@ function InfoCard({ partKey, lessonHref, build }: { partKey: string; lessonHref?
     selection clears it fades out with its last words still in it. */
 export function PartLabel({ partKey, build, className }: { partKey: string | null; build?: Build; className?: string }) {
   const last = useRef<string | null>(null);
+  // Each new pick gets fresh nodes in the live region, so screen readers announce it again, even
+  // the same part picked a second time. Re-renders of the same pick keep their nodes.
+  const pick = useRef({ key: null as string | null, seq: 0 });
+  if (partKey !== pick.current.key) pick.current = { key: partKey, seq: pick.current.seq + (partKey ? 1 : 0) };
   if (partKey) last.current = partKey;
   const key = partKey ?? last.current;
   const p = key ? partInfo(key, build) : null;
@@ -247,7 +251,7 @@ export function PartLabel({ partKey, build, className }: { partKey: string | nul
     <div className={'bx-label' + (className ? ' ' + className : '')} data-testid="part-label" role="status" aria-live="polite">
       <div className="bx-label-win" data-testid="part-label-window" data-shown={partKey ? 'true' : 'false'} aria-hidden={partKey ? undefined : true}>
         {p && (
-          <ReactFragment key={key}>
+          <ReactFragment key={key + ':' + pick.current.seq}>
             <h3 className="bx-label-name">{p.name}</h3>
             <p className="bx-label-what">{p.what}</p>
           </ReactFragment>
@@ -461,7 +465,9 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     let lastTap: { t: number; x: number; y: number } | null = null;
     let multi = false;
     const onStart = (e: TouchEvent) => {
-      stopZoomAnim();
+      // A touch stops a glide where it is, and commits it, so the Reset chip and panning match
+      // the zoom the rider now sees.
+      if (zoomAnim.current) commitZoom(zoom.current);
       if (e.touches.length >= 2) {
         e.preventDefault();
         multi = true; pan = null;
