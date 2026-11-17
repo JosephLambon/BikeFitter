@@ -49,7 +49,7 @@ test.describe('Exploded layout', () => {
   });
 });
 
-test.describe('Part label (bikeLabel on)', () => {
+test.describe('Part label', () => {
   /** Waits for the window to finish fading in. */
   const settled = (page: Page) => page.getByTestId('part-label-window').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   /** The label window's box, its text, and every drawn part its band overlaps. */
@@ -320,8 +320,7 @@ test.describe('Phone, portrait', () => {
     test(`title, then the bike centred between it and the label's space, then the dock (${w}×${h})`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
       await page.goto('/bike');
-      await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
-      await expect(page.getByTestId('drawer')).toHaveCount(0);
+      await expect(page.locator('[data-layout="portrait"]')).toBeAttached();
       const title = (await page.locator('#bike-h').boundingBox())!;
       const wall = await box(page, 'wall'), stage = await box(page, 'stage'), slot = await box(page, 'label-slot'), dock = await box(page, 'dock');
       expect(title.y + title.height).toBeLessThanOrEqual(wall.y);
@@ -388,7 +387,7 @@ test.describe('Phone, portrait', () => {
     await page.goto('/bike');
     await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
+    await expect(page.locator('[data-layout="portrait"]')).toBeAttached();
     await expect(page.getByTestId('part-label-window')).toBeHidden();
     await expect(page.getByTestId('part-hint')).toBeInViewport();
     await expect(page.locator('.bx-part.is-active')).toHaveCount(0);
@@ -473,7 +472,7 @@ test.describe('Phone, portrait', () => {
     await expect(page.locator('[data-layout="landscape"]')).toBeAttached();
     await expect(coil).toHaveAttribute('data-invite', 'off');
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator('[data-layout="thumb"]')).toBeAttached();
+    await expect(page.locator('[data-layout="portrait"]')).toBeAttached();
     await expect(coil).toHaveAttribute('data-invite', 'off');
     expect(await gripTravel(page, INVITE_WAIT)).toBe(0);
   });
@@ -623,19 +622,51 @@ test.describe('Phone, landscape', () => {
     await expect(page.getByTestId('scroll-cue')).toHaveCount(0);
   });
 
-  test('the bike takes the left, the title and card a column on the right', async ({ page }) => {
+  test('the bike takes the left; the title and the portrait part label a column on the right', async ({ page }) => {
     await page.goto('/bike');
     await expect(page.locator('[data-layout="landscape"]')).toBeAttached();
     await expect(page.getByTestId('rotate-invite')).toHaveCount(0);
     const stage = (await page.getByTestId('stage').boundingBox())!, title = (await page.locator('#bike-h').boundingBox())!;
+    const side = (await page.getByTestId('side').boundingBox())!;
     expect(title.x).toBeGreaterThanOrEqual(stage.x + stage.width);
     expect(stage.height).toBeGreaterThan(200);
     expect(stage.y + stage.height).toBeLessThanOrEqual(390);
+    await expect(page.getByTestId('part-label-window')).toBeHidden();
+    await expect(page.getByTestId('part-hint')).toBeVisible();
 
     await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
-    const c = (await page.getByRole('status').boundingBox())!;
-    expect(c.x).toBeGreaterThanOrEqual(stage.x + stage.width);
+    const win = page.getByTestId('part-label-window');
+    await expect(win).toBeVisible();
+    await expect(win).toHaveText(/Saddle/);
+    await expect(page.locator('.bx-card')).toHaveCount(0);
+    // The same window as portrait: white, amber hairline, 104 px tall, the column's full width,
+    // below the title and inside the screen.
+    await expect.poll(async () => Math.round((await win.boundingBox())!.height)).toBe(104); // settled after its fade-in
+    const w = (await win.boundingBox())!;
+    expect(Math.abs(w.width - side.width)).toBeLessThanOrEqual(1);
+    expect(w.y).toBeGreaterThanOrEqual(title.y + title.height);
+    expect(w.y + w.height).toBeLessThanOrEqual(390);
+    await expect(page.getByTestId('part-label')).toHaveClass(/bx-label--thumb/);
+    const look = await win.evaluate((el) => { const c = getComputedStyle(el); return { bg: c.backgroundColor, ring: c.boxShadow, radius: c.borderTopLeftRadius }; });
+    expect(look.bg).toBe('rgb(255, 255, 255)');
+    expect(look.ring).toContain('rgb(168, 81, 0) 0px 0px 0px 1px inset'); // the 1 px Bike-amber hairline
+    expect(look.radius).toBe('12px');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test('the build tray opens over the label’s space, never over the title, and hides the label', async ({ page }) => {
+    await page.goto('/bike');
+    await page.getByRole('button', { name: 'Saddle, Contact points' }).tap();
+    await page.getByRole('button', { name: /^Build/ }).click();
+    await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'true');
+    await expect(page.getByTestId('part-label-window')).toBeHidden();
+    await page.waitForTimeout(600);
+    const tray = (await page.getByTestId('build-tray').boundingBox())!, title = (await page.locator('#bike-h').boundingBox())!;
+    expect(tray.y).toBeGreaterThanOrEqual(title.y + title.height);
+    expect(tray.y + tray.height).toBeLessThanOrEqual(390);
+    await page.getByRole('button', { name: 'Stem, Cockpit' }).tap();
+    await expect(page.getByTestId('build-tray')).toHaveAttribute('data-open', 'false');
+    await expect(page.getByTestId('part-label-window')).toHaveText(/Stem/);
   });
 });
 

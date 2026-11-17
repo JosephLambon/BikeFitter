@@ -1,16 +1,12 @@
 /* The exploded road bike: original artwork (see drawing.ts). Hover, tap or keyboard selects a
-   part; the selected part goes Bike amber and the rest ghost; an info card explains it.
+   part; the selected part goes Bike amber and the rest ghost; the part label names it.
    Ported from designs/shared/bike.js.
    With a `build`, only that build's parts are drawn, and changing it plays a swap: leaving parts
    fly, roll or retract away, arriving ones follow, and deeper rims grow while the wheels spin. */
-import { createPortal } from 'react-dom';
 import { Fragment as ReactFragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
-import Paper from '@mui/material/Paper';
-import Box from '@mui/material/Box';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { SOURCES } from '../../content/sources';
 import type { Build } from './build';
-import { clamp, ease, explodeOffset, fitViewBox, placeCard, type Box as VBox, type Rect } from './explode';
+import { clamp, ease, explodeOffset, fitViewBox, type Box as VBox } from './explode';
 import { separate, type Piece } from './layout';
 import { IDENTITY, TAP_ZOOM, ZOOM_MS, isZoomed, panBy, zoomAt, zoomBetween, zoomViewBox, type ViewBox, type Zoom } from './zoom';
 import { B, BENCH_BOTTOM, FA, RA, REST_BOTTOM, ST, add, benchMarkup, groundMarkup, pt, shelfMarkup, type Pt } from './drawing';
@@ -92,8 +88,6 @@ function shiftMech(host: HTMLElement, delay: number) {
 }
 
 /** Card widths to try, narrowest first: wider cards are shorter, so they fit above or below a big part. */
-const CARD_WIDTHS = [300, 400, 520, 640, 760];
-interface CardPos { left: number; top: number; width: number; clear: boolean; covers: number }
 
 /** Clear space between parts when the bike is fully apart, in mm. */
 const LAYOUT_GAP = 28;
@@ -108,21 +102,6 @@ const unionBox = (a: VBox | null, b: VBox): VBox => {
   const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
   return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
 };
-const unionRect = (a: Rect | null, b: Rect): Rect =>
-  a ? { left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) }
-    : { left: b.left, top: b.top, right: b.right, bottom: b.bottom };
-
-/** Rects of the drawn parts in client pixels, one per part definition (its fragments together). */
-function partRects(host: HTMLElement, skipKey?: string | null) {
-  const by = new Map<string, Rect>();
-  host.querySelectorAll<SVGGElement>('.bx-part:not(.is-leaving)').forEach((g) => {
-    if (g.dataset.part === skipKey) return;
-    const r = g.getBoundingClientRect();
-    if (r.width || r.height) by.set(g.dataset.frag!, unionRect(by.get(g.dataset.frag!) ?? null, r));
-  });
-  return [...by.values()];
-}
-
 const canAnimate = () => typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
 
 /** Where the signal pulses ring out for an electronic shift: the lever, then each mech. */
@@ -136,10 +115,8 @@ function pulseSpots(build: Build, progress: number, vec: (p: PartDef) => [number
 export interface ExplodedBikeProps {
   /** 0 assembled, 1 fully apart. */
   progress: number;
-  /** Hover, tap and keyboard selection with an info card. Default true. */
+  /** Hover, tap and keyboard selection. Default true. */
   interactive?: boolean;
-  /** Where "Related lesson" links point, once lessons exist. */
-  lessonHref?: string;
   onSelect?: (key: string | null) => void;
   /** The build to draw (see build.ts). Without one, the original drawing. */
   build?: Build;
@@ -147,11 +124,8 @@ export interface ExplodedBikeProps {
   bench?: boolean;
   /** Pinch, double-tap and ctrl + wheel zoom the drawing on its own (never the page). Default false. */
   zoomable?: boolean;
-  /** Dock the info card here (portalled) instead of floating it over the drawing. Pass null
-      while the host is mounting: the card waits for it rather than floating. */
-  cardHost?: HTMLElement | null;
-  /** Name the selected part in a fixed label centred above the drawing (its name and what it is)
-      instead of floating the info card beside it. Ignored with a card host. Default false. */
+  /** Name the selected part in a fixed label centred above the drawing (its name and what it is).
+      Off where the page shows the label elsewhere (phones). Default false. */
   label?: boolean;
   /** Centre the drawing in the stage, bench and all, instead of standing the bench on the stage's
       bottom edge, so a stage centred on the page leaves equal space above and below the bike.
@@ -199,40 +173,6 @@ const Frag = memo(function Frag({ frag, label, active, leaving, transform, focus
   );
 });
 
-function InfoCard({ partKey, lessonHref, build }: { partKey: string; lessonHref?: string; build?: Build }) {
-  const p = partInfo(partKey, build);
-  return (
-    <>
-      <Box component="p" sx={{ display: 'inline-block', m: '0 0 8px', px: 1, py: '2px', borderRadius: '6px', background: 'var(--bike-tint)', color: 'var(--bike)', fontSize: 12, fontWeight: 600 }}>
-        {p.sys}
-      </Box>
-      <Box component="h3" sx={{ fontSize: 20, fontWeight: 650, letterSpacing: '-0.02em', m: '0 0 6px', lineHeight: 1.25 }}>{p.name}</Box>
-      <Box component="p" sx={{ fontWeight: 600, m: '0 0 8px' }}>{p.what}</Box>
-      <Box component="p" sx={{ color: 'var(--ink-2)', m: '0 0 8px' }}>{p.how}</Box>
-      {p.fit && (
-        <Box sx={{ color: 'var(--ink-2)', m: '0 0 10px', p: '10px 12px', borderRadius: '10px', background: 'var(--surface)' }}>
-          <Box component="p" sx={{ m: 0 }}><Box component="strong" sx={{ color: 'var(--ink)' }}>Why it matters for fit.</Box> {p.fit}</Box>
-          {p.sources?.length ? (
-            <Box component="p" sx={{ m: '6px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>
-              Source:{' '}
-              {p.sources.map((id, i) => {
-                const s = SOURCES[id];
-                return (
-                  <span key={id}>
-                    {i > 0 && '; '}
-                    <a href={s.url} target="_blank" rel="noreferrer">{s.author}, {s.org}<span aria-hidden="true"> →</span></a>
-                  </span>
-                );
-              })}
-            </Box>
-          ) : null}
-        </Box>
-      )}
-      {p.lesson && lessonHref && <a className="bx-card-link" href={lessonHref}>Related lesson<span aria-hidden="true"> →</span></a>}
-    </>
-  );
-}
-
 /** The part label (AGENTS.md §5.1): a white window with an amber hairline, centred above the drawing
     (or, on portrait phones, just above the dock), holding the
     selected part's name and what it is. It shows only while a part is hovered or picked, and
@@ -261,12 +201,11 @@ export function PartLabel({ partKey, build, className }: { partKey: string | nul
   );
 }
 
-export function ExplodedBike({ progress, interactive = true, lessonHref, onSelect, bench = false, zoomable = false, cardHost, label = false, centred = false, build, className }: ExplodedBikeProps) {
+export function ExplodedBike({ progress, interactive = true, onSelect, bench = false, zoomable = false, label = false, centred = false, build, className }: ExplodedBikeProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const rootRef = useRef<SVGGElement>(null);
   const benchRef = useRef<SVGGElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
   const partRefs = useRef<(SVGGElement | null)[]>([]);
   const pointerDown = useRef(false);
   const downPart = useRef<string | null>(null);
@@ -275,14 +214,11 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
   const [pinned, setPinned] = useState(false);
   const [tabStop, setTabStop] = useState(0);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const [cardPos, setCardPos] = useState<CardPos | null>(null);
-  const lastCard = useRef<{ key: string; pos: CardPos } | null>(null);
 
   /* Zoom: the base view (fitted to the drawing) and the zoom on top of it (zoom.ts). */
   const baseVb = useRef<ViewBox | null>(null);
   const zoom = useRef<Zoom>(IDENTITY);
   const [zoomed, setZoomed] = useState(false);
-  const [zoomTick, setZoomTick] = useState(0);
   const applyView = useCallback(() => {
     if (baseVb.current) svgRef.current?.setAttribute('viewBox', zoomViewBox(baseVb.current, zoom.current).join(' '));
   }, []);
@@ -293,7 +229,6 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     zoom.current = isZoomed(z) ? z : IDENTITY;
     applyView();
     setZoomed(isZoomed(zoom.current));
-    setZoomTick((n) => n + 1);
   }, [applyView, stopZoomAnim]);
 
   /* The build: which parts are on the bike, which are leaving, and how deep the rims are. */
@@ -406,7 +341,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     if (key !== prev) onSelectRef.current?.(key);
   }, []);
 
-  /* Track the host's size: it drives the viewBox, card placement and docking. */
+  /* Track the host's size: it drives the viewBox. */
   useLayoutEffect(() => {
     const el = hostRef.current!;
     const measure = () => setSize((s) => (s.w === el.clientWidth && s.h === el.clientHeight ? s : { w: el.clientWidth, h: el.clientHeight }));
@@ -605,67 +540,7 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     setTabStop((t) => Math.min(t, parts.length - 1));
   }, [parts, active, select]);
 
-  /* With a card host (phones), the card always docks there; otherwise it always floats. One
-     source of truth, so no width can leave the card nowhere. */
-  const docked = cardHost !== undefined;
-  // The fixed label replaces the floating card on larger screens; phones keep their docked card.
-  const labelled = label && interactive && !docked;
-
-  /* Place the card again whenever its own size changes (a web font arriving, copy changing). */
-  const [cardTick, setCardTick] = useState(0);
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || docked || labelled || typeof ResizeObserver === 'undefined') return;
-    let last = '';
-    const ro = new ResizeObserver(() => {
-      const k = el.offsetWidth + 'x' + el.offsetHeight;
-      if (k !== last) { last = k; setCardTick((n) => n + 1); }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [docked, labelled]);
-
-  /* The card rule (AGENTS.md §5.1): avoid the selected part, and cover as few other parts as
-     possible. When no shape misses the part, the card takes the place that covers least; the
-     drawing itself never moves or zooms for the card. */
-  useLayoutEffect(() => {
-    if (!interactive || !active || docked || labelled) { setCardPos(null); return; }
-    const hostEl = hostRef.current!;
-    const host = hostEl.getBoundingClientRect();
-    const stage = hostEl.querySelector('.bx-stage')!.getBoundingClientRect();
-    // The selected part's pieces, one rect per fragment group (a tyre is drawn on each wheel).
-    const byFrag = new Map<string, Rect>();
-    hostEl.querySelectorAll<SVGGElement>(`.bx-part[data-part="${active}"]:not(.is-leaving)`).forEach((g) => {
-      byFrag.set(g.dataset.frag!, unionRect(byFrag.get(g.dataset.frag!) ?? null, g.getBoundingClientRect()));
-    });
-    const mine = [...byFrag.values()];
-    if (!mine.length) return;
-    const el = cardRef.current!, others = partRects(hostEl, active);
-    const prev = lastCard.current?.key === active ? lastCard.current.pos : null;
-    // Try the standard card first, then wider, shorter shapes, until one misses the part.
-    const bestFor = (keep: Rect[], rest: Rect[]) => {
-      let pos: CardPos | null = null;
-      for (const w of CARD_WIDTHS) {
-        const width = Math.min(w, host.width - 16);
-        el.style.width = width + 'px';
-        const p = placeCard(keep, rest, host, stage.bottom, { width, height: el.offsetHeight }, prev && prev.width === width ? prev : null);
-        const cand = { left: p.left, top: p.top, width, clear: p.clear, covers: p.covers };
-        if (!pos || (cand.clear && (!pos.clear || cand.covers < pos.covers))) pos = cand;
-        if (cand.clear && cand.covers === 0) break;
-      }
-      return pos!;
-    };
-    let pos = bestFor(mine, others);
-    // A part drawn more than once (both tyres span the whole bike): when nowhere misses every
-    // copy, keep one copy whole rather than half-covering them all.
-    for (let i = 0; !pos.clear && mine.length > 1 && i < mine.length; i++) {
-      const cand = bestFor([mine[i]], [...others, ...mine.filter((_, j) => j !== i)]);
-      if (cand.clear) pos = cand;
-    }
-    el.style.width = pos.width + 'px'; // React won't re-apply an unchanged style, so leave the chosen width set
-    lastCard.current = { key: active, pos };
-    setCardPos(pos);
-  }, [interactive, active, docked, labelled, progress, size, vectors, zoomTick, build, cardTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const labelled = label && interactive;
 
   /* Escape clears the selection from anywhere. */
   useEffect(() => {
@@ -723,29 +598,10 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
     },
   } : {};
 
-  const card = interactive ? (
-    <Paper
-      ref={cardRef}
-      className="bx-card"
-      role="status"
-      aria-live="polite"
-      sx={{
-        border: '1px solid var(--rule)', borderRadius: '14px', boxShadow: 'var(--shadow)', p: '16px 18px', fontSize: 14, lineHeight: 1.45,
-        // Kept in the accessibility tree when empty, so the live region is ready to announce.
-        '&:empty': { position: 'absolute', width: 1, height: 1, p: 0, border: 0, overflow: 'hidden', clipPath: 'inset(50%)' },
-        '& p': { mt: 0 },
-        '& a': { fontWeight: 600, color: 'var(--ink)' },
-      }}
-      style={cardPos ? { left: cardPos.left, top: cardPos.top, width: cardPos.width } : undefined}
-    >
-      {active ? <InfoCard partKey={active} lessonHref={lessonHref} build={build} /> : null}
-    </Paper>
-  ) : null;
-
   return (
     <div
       ref={hostRef}
-      className={['bx', interactive && 'bx--interactive', active && 'has-active', docked && 'bx--docked', labelled && 'bx--label', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
+      className={['bx', interactive && 'bx--interactive', active && 'has-active', labelled && 'bx--label', relayout && 'bx--relayout', zoomed && 'is-zoomed', className].filter(Boolean).join(' ')}
     >
       {labelled && <PartLabel partKey={active} build={build} />}
       <div className="bx-stage">
@@ -796,7 +652,6 @@ export function ExplodedBike({ progress, interactive = true, lessonHref, onSelec
           <button type="button" className="bx-zoom-reset" onClick={zoomOut}>Reset zoom</button>
         )}
       </div>
-      {docked ? (cardHost ? createPortal(card, cardHost) : null) : labelled ? null : card}
     </div>
   );
 }

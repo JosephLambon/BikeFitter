@@ -8,43 +8,43 @@ import { partsFor } from './parts';
 const PART_LIST = partsFor();
 
 const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ',') });
-const card = () => screen.getByRole('status');
+/** The part label's window: it names the picked part, and keeps its last words while hidden. */
+const card = () => screen.getByTestId('part-label-window');
+const shown = () => expect(card()).toHaveAttribute('data-shown', 'true');
+const hidden = () => expect(card()).toHaveAttribute('data-shown', 'false');
 
 describe('ExplodedBike', () => {
   it('offers every part as a button named with its system, with one tab stop', () => {
-    render(<ExplodedBike progress={0} />);
+    render(<ExplodedBike progress={0} label />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(PART_LIST.length);
     expect(part('Saddle')).toHaveAccessibleName('Saddle, Contact points');
     expect(buttons.filter((b) => b.getAttribute('tabindex') === '0')).toHaveLength(1);
   });
 
-  it('shows the info card for a clicked part, with its fit note and sources, and highlights it', async () => {
+  it('names a clicked part in the label and highlights it', async () => {
     const onSelect = vi.fn();
-    render(<ExplodedBike progress={0} onSelect={onSelect} />);
+    render(<ExplodedBike progress={0} onSelect={onSelect} label />);
     await userEvent.click(part('Pedals'));
-    const c = within(card());
-    expect(c.getByRole('heading', { name: 'Pedals' })).toBeInTheDocument();
-    expect(c.getByText('Contact points')).toBeInTheDocument();
-    expect(c.getByText(/at least 10 mm behind the ball of the foot/)).toBeInTheDocument();
-    expect(c.getByRole('link', { name: /Cyclefit/ })).toHaveAttribute('href', 'https://www.cyclefit.co.uk/journal/how-to-fit-cycling-cleats-correctly');
+    shown();
+    expect(within(card()).getByRole('heading', { name: 'Pedals' })).toBeInTheDocument();
     expect(part('Pedals').closest('.bx-part')).toHaveClass('is-active');
     expect(onSelect).toHaveBeenLastCalledWith('pedals');
   });
 
   it('clears the selection when the same part is clicked again, or on Escape', async () => {
-    render(<ExplodedBike progress={0} />);
+    render(<ExplodedBike progress={0} label />);
     await userEvent.click(part('Chain'));
     expect(card()).toHaveTextContent('Chain');
     await userEvent.click(part('Chain'));
-    expect(card()).toBeEmptyDOMElement();
+    hidden();
     await userEvent.click(part('Stem'));
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(card()).toBeEmptyDOMElement();
+    hidden();
   });
 
   it('moves between parts with the arrow keys, Home and End', async () => {
-    render(<ExplodedBike progress={0} />);
+    render(<ExplodedBike progress={0} label />);
     await userEvent.tab();
     const first = part(PART_LIST[0].name);
     expect(document.activeElement).toBe(first);
@@ -62,11 +62,11 @@ describe('ExplodedBike', () => {
   });
 
   it('previews on hover with a mouse, and clears when the pointer leaves', () => {
-    render(<ExplodedBike progress={0} />);
+    render(<ExplodedBike progress={0} label />);
     fireEvent.pointerOver(part('Fork'), { pointerType: 'mouse' });
     expect(card()).toHaveTextContent('Fork');
     fireEvent.pointerLeave(part('Fork').closest('svg')!, { pointerType: 'mouse' });
-    expect(card()).toBeEmptyDOMElement();
+    hidden();
   });
 
   it('the part label puts fresh words in its live region each time a part is picked, even the same part again', () => {
@@ -96,7 +96,6 @@ describe('ExplodedBike', () => {
       expect(within(label()).getByRole('heading', { name: 'Pedals' })).toBeInTheDocument();
       expect(label()).toHaveTextContent('Clipless road pedals that lock onto cleats on your shoes.');
       expect(label()).not.toHaveTextContent(/Contact points|10 mm behind/);
-      expect(container.querySelector('.bx-card')).toBeNull();
     });
 
     it('swaps the words on hover, and hides the window when the pointer leaves, keeping its words while it fades', () => {
@@ -119,20 +118,10 @@ describe('ExplodedBike', () => {
       await userEvent.click(part('Stem'));
       expect(win()).toHaveAttribute('data-shown', 'false');
     });
-
-    it('docks the full card instead when there is a card host (phones)', async () => {
-      const host = document.createElement('div');
-      document.body.append(host);
-      render(<ExplodedBike progress={0} label cardHost={host} />);
-      expect(screen.queryByTestId('part-label')).not.toBeInTheDocument();
-      await userEvent.click(part('Pedals'));
-      expect(within(host).getByText('Contact points')).toBeInTheDocument();
-      host.remove();
-    });
   });
 
   it('moves parts apart along their own vectors as progress rises', () => {
-    const { rerender, container } = render(<ExplodedBike progress={0} />);
+    const { rerender, container } = render(<ExplodedBike progress={0} label />);
     const saddle = () => container.querySelector('[data-frag="saddle"]')!;
     const frame = () => container.querySelector('[data-frag="toptube"]')!;
     expect(saddle()).not.toHaveAttribute('style');
@@ -151,7 +140,7 @@ describe('ExplodedBike', () => {
   describe('with a build', () => {
     it('draws only the parts the build has, each one a button', () => {
       const b = { ...DEFAULT_BUILD, brakes: 'rim' as const };
-      const { container } = render(<ExplodedBike progress={0} build={b} />);
+      const { container } = render(<ExplodedBike progress={0} build={b} label />);
       expect(screen.getAllByRole('button')).toHaveLength(partsFor(b).length);
       expect(part('Rim brake calliper')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Rotor/ })).not.toBeInTheDocument();
@@ -160,30 +149,30 @@ describe('ExplodedBike', () => {
 
     it('swaps parts when the build changes, and clears a selection that left the bike', async () => {
       const onSelect = vi.fn();
-      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} onSelect={onSelect} />);
+      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} onSelect={onSelect} label />);
       await userEvent.click(part('Front mech'));
       expect(card()).toHaveTextContent('Front mech');
-      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, chainrings: 'single' }} onSelect={onSelect} />);
-      expect(card()).toBeEmptyDOMElement();
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, chainrings: 'single' }} onSelect={onSelect} label />);
+      hidden();
       expect(onSelect).toHaveBeenLastCalledWith(null);
       expect(container.querySelector('[data-frag="frontmech"]')).not.toBeInTheDocument();
       expect(container.querySelector('[data-frag="smallring"]')).not.toBeInTheDocument();
     });
 
-    it('keeps a selection that is still on the bike, with copy for the new build', async () => {
-      const { rerender } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+    it('keeps a selection that is still on the bike', async () => {
+      const { rerender } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} label />);
       await userEvent.click(part('Brake and gear levers'));
-      expect(card()).not.toHaveTextContent('signal');
-      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} />);
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} label />);
+      shown();
       expect(card()).toHaveTextContent('Brake and gear levers');
-      expect(card()).toHaveTextContent('signal');
+      expect(part('Brake and gear levers').closest('.bx-part')).toHaveClass('is-active');
     });
 
     it('redraws the rims deeper for deep-section rims', () => {
-      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+      const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} label />);
       const rim = () => container.querySelector('[data-frag="rim-f"] .bx-lift')!.innerHTML;
       const shallow = rim();
-      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, rims: 'deep' }} />);
+      rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, rims: 'deep' }} label />);
       expect(rim()).not.toBe(shallow);
     });
 
@@ -205,8 +194,8 @@ describe('ExplodedBike', () => {
       });
 
       it('keeps leaving parts drawn, but not selectable, until they have gone', async () => {
-        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
-        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, brakes: 'rim' }} />);
+        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} label />);
+        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, brakes: 'rim' }} label />);
         const rotor = () => container.querySelector('[data-frag="rotor-f"]');
         expect(rotor()).toHaveClass('is-leaving');
         expect(rotor()).not.toHaveAttribute('role');
@@ -216,9 +205,9 @@ describe('ExplodedBike', () => {
       });
 
       it('rings out a signal from the lever and mechs when the gears go electronic', () => {
-        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} />);
+        const { rerender, container } = render(<ExplodedBike progress={0} build={DEFAULT_BUILD} label />);
         expect(container.querySelector('.bx-pulse')).not.toBeInTheDocument();
-        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} />);
+        rerender(<ExplodedBike progress={0} build={{ ...DEFAULT_BUILD, gears: 'electronic' }} label />);
         expect(container.querySelectorAll('.bx-pulse')).toHaveLength(3);
       });
     });

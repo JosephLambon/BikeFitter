@@ -28,7 +28,7 @@ function scrollTo(y: number) {
 describe('Explore the bike page', () => {
   it('names the page and cues a scroll, with nothing else below the drawing', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     expect(screen.getByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
     expect(screen.getByTestId('scroll-cue')).toHaveAttribute('aria-hidden', 'true');
     expect(within(screen.getByRole('main')).queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
@@ -36,19 +36,10 @@ describe('Explore the bike page', () => {
     expect(document.title).toBe('Explore the bike · BikeFitter');
   });
 
-  it('uses the cable scrubber, nudges while together, and drops the percentage', () => {
+  it('uses the coil scrubber, with no nudge arrow and no percentage', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     expect(screen.queryByText(/\d+%/)).not.toBeInTheDocument();
-    expect(document.querySelector('[data-scrubber]')).toHaveAttribute('data-scrubber', 'cable');
-    expect(screen.getByTestId('scrubber-nudge')).toBeInTheDocument();
-    fireEvent.change(slider(), { target: { value: 30 } });
-    expect(screen.queryByTestId('scrubber-nudge')).not.toBeInTheDocument();
-  });
-
-  it('uses the coil scrubber with the flag on, and no nudge arrow', () => {
-    reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: true, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
     expect(document.querySelector('[data-scrubber]')).toHaveAttribute('data-scrubber', 'coil');
     expect(screen.queryByTestId('scrubber-nudge')).not.toBeInTheDocument();
     fireEvent.change(slider(), { target: { value: 30 } });
@@ -57,7 +48,7 @@ describe('Explore the bike page', () => {
 
   it('keeps the heading and turns the scroll cue into a hint as the bike comes apart', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     const hint = screen.getByTestId('part-hint');
     expect(hint).toHaveTextContent('a part to learn more.');
     expect(hint).toHaveStyle({ opacity: '0' });
@@ -69,20 +60,20 @@ describe('Explore the bike page', () => {
 
   it('has no design-review pickers left on the page', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     expect(screen.queryByRole('group', { name: /^Preview/ })).not.toBeInTheDocument();
   });
 
   it('drops the scroll cue and shows the hint straight away when motion is reduced', () => {
     reducedMotion(true);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     expect(screen.queryByTestId('scroll-cue')).not.toBeInTheDocument();
     expect(screen.getByTestId('part-hint')).toHaveStyle({ opacity: '1' });
   });
 
   it('takes the bike apart with the slider, in place, and says how far', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
     fireEvent.change(slider(), { target: { value: 42 } });
     expect(slider()).toHaveAttribute('aria-valuetext', '42% apart');
@@ -94,7 +85,7 @@ describe('Explore the bike page', () => {
 
   it('takes it apart and puts it back with the button', async () => {
     reducedMotion(true);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     await userEvent.click(screen.getByRole('button', { name: 'Take the bike apart' }));
     expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
     expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
@@ -104,7 +95,7 @@ describe('Explore the bike page', () => {
 
   it('explodes the bike as you scroll through the reel', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     scrollTo(900);
     expect(slider()).toHaveAttribute('aria-valuetext', '50% apart');
@@ -112,9 +103,9 @@ describe('Explore the bike page', () => {
     expect(slider()).toHaveAttribute('aria-valuetext', 'Fully apart');
   });
 
-  it('tucks the heading away and grows the bench wall once the reel is most of the way through (bikeTuck)', () => {
+  it('tucks the heading away and grows the bench wall once the reel is most of the way through ', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: true, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     const layout = document.querySelector<HTMLElement>('[data-layout="wide"]')!;
     scrollTo(900);
@@ -126,18 +117,9 @@ describe('Explore the bike page', () => {
     expect(layout.style.getPropertyValue('--tuck')).toBe('0');
   });
 
-  it('keeps the heading in place on scroll with bikeTuck off', () => {
-    reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    sizeReel();
-    scrollTo(2000);
-    expect(document.querySelector<HTMLElement>('[data-layout="wide"]')!.style.getPropertyValue('--tuck')).toBe('');
-    expect(screen.getByTestId('bike-head')).not.toHaveAttribute('data-tuck');
-  });
-
   it('never tucks the heading with reduced motion', () => {
     reducedMotion(true);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: true, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     scrollTo(2000);
     expect(screen.getByTestId('bike-head')).not.toHaveAttribute('data-tuck');
@@ -145,7 +127,7 @@ describe('Explore the bike page', () => {
 
   it('never makes the drawing jump after the slider is used: scroll takes over only once it catches up', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     scrollTo(200); // together
     fireEvent.change(slider(), { target: { value: 80 } });
@@ -158,28 +140,23 @@ describe('Explore the bike page', () => {
 
   it('ignores scroll when motion is reduced', () => {
     reducedMotion(true);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     scrollTo(1600);
     expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
   });
 
-  it('shows the part label above the drawing with the flag on, and the floating card with it off', async () => {
+  it('names a picked part in the label above the drawing, with no floating card', async () => {
     reducedMotion(false);
-    const { unmount } = renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: true, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     await userEvent.click(screen.getByRole('button', { name: /^Saddle,/ }));
     expect(screen.getByTestId('part-label')).toHaveTextContent('Saddle');
     expect(document.querySelector('.bx-card')).toBeNull();
-    unmount();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    await userEvent.click(screen.getByRole('button', { name: /^Saddle,/ }));
-    expect(screen.queryByTestId('part-label')).not.toBeInTheDocument();
-    expect(document.querySelector('.bx-card')).toHaveTextContent('Saddle');
   });
 
   it('lists the sources behind its fit notes in the footer', () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     const foot = screen.getByRole('contentinfo');
     expect(within(foot).getByRole('link', { name: /How to fit cycling cleats correctly/ })).toHaveAttribute('href', 'https://www.cyclefit.co.uk/journal/how-to-fit-cycling-cleats-correctly');
     expect(within(foot).getAllByText(/Last verified 7 November 2026/).length).toBe(3);
@@ -193,18 +170,9 @@ describe('Explore the bike: build tray', () => {
   const pick = (option: string, choice: string) =>
     userEvent.click(within(screen.getByRole('radiogroup', { name: option })).getByRole('radio', { name: choice }));
 
-  it('is hidden with the flag off, and the drawing is the original bike', () => {
-    reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    expect(screen.queryByRole('button', { name: /^Build/ })).not.toBeInTheDocument();
-    expect(screen.queryByTestId('build-tray')).not.toBeInTheDocument();
-    expect(partButton('Gear cable')).not.toBeInTheDocument();
-    expect(partButton('Rotor \\(disc\\)')).toBeInTheDocument();
-  });
-
   it('starts closed and inert, and opens from the Build button', async () => {
     reducedMotion(true);
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     const tray = document.getElementById(toggle().getAttribute('aria-controls')!)!;
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');
     expect(tray).toHaveAttribute('inert');
@@ -217,7 +185,7 @@ describe('Explore the bike: build tray', () => {
 
   it('offers every option as a two-way switch with the standard build picked', async () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     await userEvent.click(toggle());
     for (const [option, picked] of [['Gears', 'Mechanical'], ['Brakes', 'Disc'], ['Rims', 'Shallow'], ['Chainrings', 'Two (2×)'], ['Mudguards', 'Off']]) {
       const radios = within(screen.getByRole('radiogroup', { name: option })).getAllByRole('radio');
@@ -228,7 +196,7 @@ describe('Explore the bike: build tray', () => {
 
   it('swaps parts on the bike, announces the change without showing a note, and counts it', async () => {
     reducedMotion(false);
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     await userEvent.click(toggle());
     await pick('Brakes', 'Rim');
     expect(partButton('Rim brake calliper')).toBeInTheDocument();
@@ -256,15 +224,11 @@ describe('Explore the bike on a portrait phone', () => {
     }));
   }
   const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ', ') });
-  const card = () => screen.getByRole('status');
-  /** Keyboard activation: the tab moves only by the thumb or the keyboard, never by a tap. */
-  const press = async (name: string) => { screen.getByRole('button', { name }).focus(); await userEvent.keyboard('{Enter}'); };
 
-  it('bikeThumbLabel: no drawer; the hint waits above the dock and the label stays hidden until a part is picked', () => {
+  it('no drawer; the hint waits above the dock and the label stays hidden until a part is picked', () => {
     portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: true });
-    expect(document.querySelector('[data-layout="thumb"]')).toBeInTheDocument();
-    expect(screen.queryByTestId('drawer')).not.toBeInTheDocument();
+    renderApp('/bike');
+    expect(document.querySelector('[data-layout="portrait"]')).toBeInTheDocument();
     expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('dock')).toBeInTheDocument();
     const slot = screen.getByTestId('label-slot');
@@ -273,18 +237,18 @@ describe('Explore the bike on a portrait phone', () => {
     expect(within(slot).getByTestId('part-label-window')).toHaveAttribute('data-shown', 'false');
   });
 
-  it('bikeThumbLabel: a narrow window with a mouse is told to hover, not tap or pinch', () => {
+  it('a narrow window with a mouse is told to hover, not tap or pinch', () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query === '(max-width: 760px)' || query === '(hover: hover)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }));
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: true });
+    renderApp('/bike');
     expect(within(screen.getByTestId('label-slot')).getByTestId('part-hint')).toHaveTextContent('Hover a part to learn more.');
   });
 
-  it('bikeThumbLabel: picking a part shows only its name and what it is; picking it again lets it go', async () => {
+  it('picking a part shows only its name and what it is; picking it again lets it go', async () => {
     portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: true });
+    renderApp('/bike');
     await userEvent.click(part('Saddle'));
     const label = within(screen.getByTestId('label-slot')).getByRole('status');
     expect(label).toHaveTextContent('Saddle');
@@ -298,9 +262,9 @@ describe('Explore the bike on a portrait phone', () => {
     expect(screen.getByTestId('part-hint')).toHaveStyle({ opacity: '1' });
   });
 
-  it('bikeThumbLabel: the build tray and the label never show together', async () => {
+  it('the build tray and the label never show together', async () => {
     portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: true });
+    renderApp('/bike');
     const tray = screen.getByTestId('build-tray');
     await userEvent.click(screen.getByRole('button', { name: /^Build/ }));
     expect(tray).toHaveAttribute('data-open', 'true');
@@ -311,159 +275,74 @@ describe('Explore the bike on a portrait phone', () => {
     expect(screen.getByTestId('part-label-window')).toHaveAttribute('data-shown', 'true');
   });
 
-  it('with the flag off, keeps the panel below the controls, with the hint and no scroll cue, and has no drawer', () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    expect(screen.getByTestId('panel')).toBeInTheDocument();
-    expect(screen.queryByTestId('scroll-cue')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('panel')).getByTestId('part-hint')).toHaveStyle({ opacity: '1' });
-    expect(screen.queryByTestId('drawer')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('dock')).not.toBeInTheDocument();
-  });
-
-  it('starts with the drawer open on a guide, no scroll cue, the title unchanged, and no invitation to turn the phone', () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    expect(document.querySelector('[data-layout="drawer"]')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
-    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    expect(screen.getByTestId('drawer-body')).not.toHaveAttribute('inert');
-    expect(screen.getByRole('button', { name: 'Hide part details' })).toHaveAttribute('aria-expanded', 'true');
-    const guide = within(screen.getByTestId('drawer-body')).getByTestId('drawer-idle');
-    expect(within(guide).getByTestId('part-hint')).toHaveTextContent('Tap a part to learn more.');
-    expect(guide).toHaveTextContent('Drag this panel down to hide it.');
-    expect(screen.queryByText(/^(Show|Hide)$/)).not.toBeInTheDocument(); // no Show/Hide button
-    expect(screen.queryByTestId('scroll-cue')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('rotate-invite')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
-  });
-
-  it('with nothing selected, a thumb swipe down hides the guide and a swipe up brings it back', () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    const tab = screen.getByTestId('drawer-tab'), drawer = screen.getByTestId('drawer');
-    const swipe = (dy: number) => {
-      fireEvent.pointerDown(tab, { clientY: 600, pointerId: 1 });
-      fireEvent.pointerMove(tab, { clientY: 600 + dy, pointerId: 1 });
-      fireEvent.pointerUp(tab, { clientY: 600 + dy, pointerId: 1 });
-      fireEvent.click(tab, { detail: 1 });
-    };
-    swipe(60);
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    expect(screen.getByTestId('drawer-body')).toHaveAttribute('inert');
-    expect(screen.getByRole('button', { name: 'Show part details' })).toBeInTheDocument();
-    swipe(-60);
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    expect(within(screen.getByTestId('drawer-body')).getByTestId('part-hint')).toHaveTextContent('Tap a part to learn more.');
-  });
-
-  it('moves only by the thumb: a tap on the tab does nothing, but Enter still toggles it for the keyboard', async () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    const drawer = screen.getByTestId('drawer');
-    await userEvent.click(screen.getByTestId('drawer-tab'));
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    screen.getByTestId('drawer-tab').focus();
-    await userEvent.keyboard('{Enter}');
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    await userEvent.keyboard('{Enter}');
-    expect(drawer).toHaveAttribute('data-open', 'true');
-  });
-
   it('never takes the bike apart on scroll', () => {
     portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     sizeReel();
     scrollTo(1600);
     expect(slider()).toHaveAttribute('aria-valuetext', 'Together');
   });
 
-  it('opens and hides with a swipe of the thumb on the tab, and ignores a short drag', async () => {
+  it('keeps the explode button, coil scrubber and Build button in the dock, and opens the tray on the wall above it', () => {
     portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    await userEvent.click(part('Saddle'));
-    const tab = screen.getByTestId('drawer-tab'), drawer = screen.getByTestId('drawer');
-    const drag = (dy: number) => {
-      fireEvent.pointerDown(tab, { clientY: 600, pointerId: 1 });
-      fireEvent.pointerMove(tab, { clientY: 600 + dy, pointerId: 1 });
-      fireEvent.pointerUp(tab, { clientY: 600 + dy, pointerId: 1 });
-      fireEvent.click(tab, { detail: 1 });
-    };
-    drag(60);
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    drag(-10); // too short: a tap, which does nothing
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    drag(-60);
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    drag(-60); // already open: stays open, the click after the swipe doesn't toggle it back
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    drag(60);
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    drag(-60);
-    expect(drawer).toHaveAttribute('data-open', 'true');
-  });
-
-  it('keeps the explode button, cable scrubber and Build button in the dock, and opens the tray above it in the drawer’s space', () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     const dock = within(screen.getByTestId('dock'));
     expect(dock.getByRole('button', { name: 'Take the bike apart' })).toBeInTheDocument();
     expect(dock.getByRole('slider', { name: 'How far apart the bike is' })).toBeInTheDocument();
-    expect(screen.getByTestId('dock').querySelector('[data-scrubber="cable"]')).toBeInTheDocument();
+    expect(screen.getByTestId('dock').querySelector('[data-scrubber="coil"]')).toBeInTheDocument();
     expect(dock.getByRole('button', { name: /^Build/ })).toBeInTheDocument();
     expect(dock.queryByTestId('build-tray')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('drawer-space')).getByTestId('build-tray')).toBeInTheDocument();
-  });
-
-  it('opens the drawer with the part’s card when a part is selected, and hides it to a bar naming the part', async () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    await userEvent.click(part('Saddle'));
-    const drawer = screen.getByTestId('drawer');
-    expect(drawer).toBeVisible();
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    expect(within(drawer).getByRole('status')).toHaveTextContent('Saddle');
-    expect(card()).toHaveTextContent('Why it matters for fit.');
-
-    await press('Hide part details');
-    expect(drawer).toHaveAttribute('data-open', 'false');
-    expect(screen.getByTestId('drawer-body')).toHaveAttribute('inert');
-    const show = screen.getByRole('button', { name: 'Show details: Saddle' });
-    expect(show).toHaveAttribute('aria-expanded', 'false');
-
-    await press('Show details: Saddle');
-    expect(drawer).toHaveAttribute('data-open', 'true');
-    expect(screen.getByTestId('drawer-body')).not.toHaveAttribute('inert');
-  });
-
-  it('opens a hidden drawer again when another part is selected, and shows the guide again when nothing is', async () => {
-    portraitPhone();
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    await userEvent.click(part('Saddle'));
-    await press('Hide part details');
-    await userEvent.click(part('Chainset'));
-    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    expect(card()).toHaveTextContent('Chainset');
-    await userEvent.keyboard('{Escape}');
-    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    expect(screen.getByTestId('drawer-idle')).toBeInTheDocument();
+    expect(within(screen.getByTestId('wall')).getByTestId('build-tray')).toBeInTheDocument();
   });
 });
 
-describe('Explore the bike on a portrait phone: drawer and build tray', () => {
-  it('opening the build tray hides the drawer, and selecting a part closes the tray', async () => {
+describe('Explore the bike on a landscape phone', () => {
+  /** A phone turned sideways: short and wide, on a touch screen. */
+  function landscapePhone() {
     vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query === '(max-width: 760px)', media: query, onchange: null,
+      matches: query === '(max-height: 500px) and (orientation: landscape)', media: query, onchange: null,
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     }));
-    renderApp('/bike', { exploreBike: true, bikeBuild: true, bikeDrawer: true, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    const build = () => screen.getByRole('button', { name: /^Build/ });
-    await userEvent.click(screen.getByRole('button', { name: /^Saddle, / }));
-    await userEvent.click(build());
-    expect(build()).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
-    await userEvent.click(screen.getByRole('button', { name: /^Chainset, / }));
-    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'true');
-    expect(build()).toHaveAttribute('aria-expanded', 'false');
+  }
+  const part = (name: string) => screen.getByRole('button', { name: new RegExp('^' + name + ', ') });
+
+  it('shows the same label as portrait: the hint waits in its space, and the label stays hidden until a part is picked', () => {
+    landscapePhone();
+    renderApp('/bike');
+    expect(document.querySelector('[data-layout="landscape"]')).toBeInTheDocument();
+    expect(screen.queryByTestId('panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('rotate-invite')).not.toBeInTheDocument();
+    const slot = within(screen.getByTestId('side')).getByTestId('label-slot');
+    expect(within(slot).getByTestId('part-hint')).toHaveTextContent('Tap a part to learn more. Pinch to zoom.');
+    expect(within(slot).getByTestId('part-label-window')).toHaveAttribute('data-shown', 'false');
+  });
+
+  it('picking a part shows only its name and what it is, in the portrait label; picking it again lets it go', async () => {
+    landscapePhone();
+    renderApp('/bike');
+    await userEvent.click(part('Saddle'));
+    const label = within(screen.getByTestId('label-slot')).getByRole('status');
+    expect(label).toHaveClass('bx-label--thumb');
+    expect(label).toHaveTextContent('Saddle');
+    expect(label).toHaveTextContent('Where you sit');
+    expect(label).not.toHaveTextContent('Why it matters for fit');
+    expect(screen.getByTestId('part-label-window')).toHaveAttribute('data-shown', 'true');
+    expect(screen.getByTestId('part-hint')).toHaveStyle({ opacity: '0' });
+    expect(document.querySelector('.bx-card')).toBeNull();
+    await userEvent.click(part('Saddle'));
+    expect(screen.getByTestId('part-label-window')).toHaveAttribute('data-shown', 'false');
+  });
+
+  it('the build tray and the label never show together', async () => {
+    landscapePhone();
+    renderApp('/bike');
+    const tray = within(screen.getByTestId('side')).getByTestId('build-tray');
+    await userEvent.click(screen.getByRole('button', { name: /^Build/ }));
+    expect(tray).toHaveAttribute('data-open', 'true');
+    expect(screen.getByTestId('label-slot')).toHaveAttribute('data-hidden', 'true');
+    await userEvent.click(part('Saddle'));
+    expect(tray).toHaveAttribute('data-open', 'false');
+    expect(screen.getByTestId('label-slot')).not.toHaveAttribute('data-hidden');
+    expect(screen.getByTestId('part-label-window')).toHaveAttribute('data-shown', 'true');
   });
 });

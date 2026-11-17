@@ -1,4 +1,4 @@
-/* The coil-spring explode scrubber (flag `bikeCoil`). A steel coil stretches from an anchor
+/* The coil-spring explode scrubber. A steel coil stretches from an anchor
    cap to the grip as the bike comes apart: the half of each turn behind the axis is drawn
    lighter than the half in front, the middle coils lag a moving grip and wobble when it
    stops. Until someone first moves it, the grip gives a small tug every few seconds to say
@@ -14,8 +14,7 @@ import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { sliderText } from './explode';
-import { CoilMotion, coilPaths, FILL_LEAD, INVITE, MIN_SPAN, nextTug, PAD } from './scrubber';
-import { SCRUBBER_H } from './ExplodeScrubber';
+import { CoilMotion, coilPaths, FILL_LEAD, INVITE, MIN_SPAN, nextTug, PAD, SCRUBBER_H } from './scrubber';
 
 const H = SCRUBBER_H;
 

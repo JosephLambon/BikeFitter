@@ -12,19 +12,17 @@ import { Icon } from '../components/Icon';
 import { Wrap } from '../components/layout';
 import { ExplodedBike, PartLabel } from '../features/bike/ExplodedBike';
 import { caughtUp, clamp, headBlend, reelProgress, tuckProgress } from '../features/bike/explode';
-import { ExplodeScrubber, SCRUBBER_H } from '../features/bike/ExplodeScrubber';
+import { SCRUBBER_H } from '../features/bike/scrubber';
 import { CoilScrubber } from '../features/bike/CoilScrubber';
 import { benchWall, motion } from '../theme/tokens';
-import { isEnabled } from '../flags';
 import { DEFAULT_BUILD, choiceOf, type Build, type BuildKey } from '../features/bike/build';
 import { BuildToggle, BuildTray } from '../features/bike/BuildTray';
-import { PartDrawer } from '../features/bike/PartDrawer';
 
 const REDUCED = '(prefers-reduced-motion: reduce)';
-/** Portrait phones too short for the build tray and the drawer's tab together (iPhone 14 in Safari is 664 px). */
+/** Short portrait phones (iPhone 14 in Safari is 664 px): the stage gives the build tray more room. */
 const SHORT = '@media (max-height: 720px)';
 const PORTRAIT = '(max-width: 760px)';
-/** The label's space above the dock on portrait phones: the 104 px window and 16 px below it. */
+/** The part label's space on phones: the 104 px window and 16 px below it. */
 const THUMB_SLOT = 120;
 /** A phone turned sideways: short and wide. */
 const LANDSCAPE = '(max-height: 500px) and (orientation: landscape)';
@@ -77,7 +75,7 @@ function useExplodeStage(reelRef: RefObject<HTMLElement | null>, scroll: boolean
   return { progress, fromSlider, toggle };
 }
 
-/** Larger screens (flag bikeTuck): once the reel is most of the way through, the heading and hint
+/** Larger screens: once the reel is most of the way through, the heading and hint
     scroll up out of view and the bench wall grows into their space. Writes `--tuck` (0..1) on the
     layout and the heading's height as `--head-size`, straight to the style on every scroll, so
     the page never re-renders for it. */
@@ -104,11 +102,10 @@ function useTuck(on: boolean, reelRef: RefObject<HTMLElement | null>, layoutRef:
 
 export function ExploreBikePage() {
   const reduce = useMediaQuery(REDUCED, { noSsr: true });
-  /* Phones. Portrait: title, then the stage (in proportion to the bike), the controls, and a
-     panel below them for the hint, the build tray and the info card, so the card never covers the
-     drawing. Landscape (a phone turned sideways): the stage and controls fill the left, and the
-     title and panel sit in a column on the right, so the bike gets the whole height. Portrait
-     invites riders to turn the phone for a bigger bike. */
+  /* Phones. Portrait: the title on white, then a bench wall down to a dock that holds the
+     controls. The bike sits centred on the wall above the part label's space. Landscape (a phone
+     turned sideways): the stage and controls fill the left, and the title and the same label sit
+     in a column on the right, so the bike gets the whole height. */
   const land = useMediaQuery(LANDSCAPE, { noSsr: true });
   const portrait = useMediaQuery(PORTRAIT, { noSsr: true }) && !land;
   const compact = land || portrait;
@@ -118,15 +115,13 @@ export function ExploreBikePage() {
   const { progress, fromSlider, toggle } = useExplodeStage(reelRef, scrolls, reduce);
   const layoutRef = useRef<HTMLElement>(null);
   const headRef = useRef<HTMLElement>(null);
-  const tuck = scrolls && isEnabled('bikeTuck');
-  useTuck(tuck, reelRef, layoutRef, headRef);
+  useTuck(scrolls, reelRef, layoutRef, headRef);
   const canHover = useMediaQuery('(hover: hover)', { noSsr: true });
   // No scroll to cue (reduced motion, or a phone): the hint shows from the start.
   const t = scrolls ? headBlend(progress, false) : 1;
   const apart = progress > 0.5;
 
-  // The build tray (flag bikeBuild): swap gears, brakes, rims, chainrings and mudguards.
-  const buildOn = isEnabled('bikeBuild');
+  // The build tray: swap gears, brakes, rims, chainrings and mudguards.
   const [build, setBuild] = useState<Build>(DEFAULT_BUILD);
   const [open, setOpen] = useState(false);
   const [said, setSaid] = useState('');
@@ -146,46 +141,22 @@ export function ExploreBikePage() {
   const [scrubbed, setScrubbed] = useState(false);
   const fromCoil = useCallback((p: number) => { setScrubbed(true); fromSlider(p); }, [fromSlider]);
 
-  const coarse = useMediaQuery('(pointer: coarse)', { noSsr: true });
-  const [cardHost, setCardHost] = useState<HTMLElement | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  /* Portrait phones with the part drawer (flag bikeDrawer): the bench wall fills the screen,
-     the info card sits in a window at the thumb that opens when a part is selected and can
-     always be hidden, and the explode controls stay in a dock along the bottom. */
-  const drawer = portrait && !isEnabled('bikeThumbLabel') && isEnabled('bikeDrawer');
-  /* Portrait phones with the label at the thumb (flag bikeThumbLabel): no drawer. The part label (the
-     desktop window: name and what it is) waits just above the dock and shows only while a part is
-     picked. Its space is always kept, and the bike sits centred between the title and it, so nothing
-     moves when it shows. Like the drawer layout, the controls sit in the dock. */
-  const thumb = portrait && isEnabled('bikeThumbLabel');
-  const docked = drawer || thumb;
-  // Open on load, on the guide; the thumb hides it.
-  const [drawerOpen, setDrawerOpen] = useState(true);
-  // The drawer and the build tray share the space above the dock: opening one hides the other,
-  // so the bike always keeps room on the screen.
+  // On phones the build tray and the part label share one space: picking a part closes the tray.
   const onSelect = useCallback((key: string | null) => {
     setSelected(key);
-    if (key && drawer) setDrawerOpen(true);
-    if (key && docked) setOpen(false);
-  }, [drawer, docked]);
-  const openTray = useCallback((o: boolean) => {
-    setOpen(o);
-    if (o && drawer) setDrawerOpen(false);
-  }, [drawer]);
-  const openDrawer = useCallback((o: boolean) => {
-    setDrawerOpen(o);
-    if (o) setOpen(false);
-  }, []);
+    if (key && compact) setOpen(false);
+  }, [compact]);
   const hint = (canHover ? 'Hover a part to learn more.' : 'Tap a part to learn more.') + (canHover ? '' : ' Pinch to zoom.');
   // Turning a phone (or resizing a window) across layouts mounts the drawing again with nothing
   // picked, so let go of the page's pick too: the label never names a part that isn't picked.
-  const layout = land ? 'landscape' : thumb ? 'thumb' : drawer ? 'drawer' : portrait ? 'portrait' : 'wide';
+  const layout = land ? 'landscape' : portrait ? 'portrait' : 'wide';
   const [seenLayout, setSeenLayout] = useState(layout);
   if (layout !== seenLayout) { setSeenLayout(layout); setSelected(null); }
-  // The bouncing scroll cue turns into the hint as the bike starts to come apart. Where scroll
-  // does nothing (a phone, or reduced motion) there is no cue, only the hint.
+  // The bouncing scroll cue turns into the hint as the bike starts to come apart. Larger screens
+  // only: phones show the hint in the label's space.
   const cue = (
-    <Box sx={{ display: 'grid', placeItems: 'center', mt: compact ? 0 : '12px', minHeight: 32, '& > *': { gridArea: '1 / 1' } }}>
+    <Box sx={{ display: 'grid', placeItems: 'center', mt: '12px', minHeight: 32, '& > *': { gridArea: '1 / 1' } }}>
       {scrolls && (
         <Box
           aria-hidden="true" data-testid="scroll-cue"
@@ -207,7 +178,7 @@ export function ExploreBikePage() {
       <Typography
         component="p" data-testid="part-hint"
         style={{ opacity: t, transform: `translateY(${10 * (1 - t)}px)` }}
-        sx={{ m: 0, fontSize: compact ? 15 : 'clamp(19px, 1.9vw, 22px)', lineHeight: 1.4, color: 'var(--ink-2)' }}
+        sx={{ m: 0, fontSize: 'clamp(19px, 1.9vw, 22px)', lineHeight: 1.4, color: 'var(--ink-2)' }}
       >
         {hint}
       </Typography>
@@ -229,36 +200,26 @@ export function ExploreBikePage() {
       sx={{
         // The workbench: amber dots on a white wall, with the bench drawn under the tyres.
         position: 'relative', minHeight: 0, width: compact ? '100%' : 'min(1320px, 100% - 32px)', mx: 'auto',
-        mt: compact ? 0 : tuck ? 'calc(24px - 40px * var(--tuck, 0))' : '24px',
+        mt: compact ? 0 : 'calc(24px - 40px * var(--tuck, 0))',
         // clip, not hidden: nothing (focus, a zoomed drawing) can ever scroll the stage.
         p: compact ? '12px 12px 0' : '24px 24px 0', borderRadius: compact ? '16px' : '20px', overflow: 'clip', background: benchWall,
         boxShadow: 'inset 0 0 0 1px var(--bench-line)',
         '& .bx, & .bx-stage': { height: '100%' },
-        [`@media ${REDUCED}`]: { height: compact ? undefined : '60vh', '& .bx-card:not(:empty)': { animation: 'none' } },
-        // Portrait phones: the stage is in proportion to the bike, not the leftover height.
-        ...(portrait && { height: 'auto', aspectRatio: '4 / 3' }),
+        ...(!compact && { [`@media ${REDUCED}`]: { height: '60vh' } }),
         ...(land && { height: '100%' }),
-        // The drawer layout: the whole screen is the bench wall, so the stage is just the bike.
-        // It keeps the bike's proportions and sits near the top, so the drawer opening below it
-        // never moves the bike. Capped on wider screens so the drawer keeps room to open.
-        // Short screens give a little more of the height to the drawer's space, for the build tray.
-        ...(docked && { height: 'auto', aspectRatio: '4 / 3', maxHeight: '42svh', p: '8px 4px 0', borderRadius: 0, background: 'none', boxShadow: 'none', [SHORT]: { maxHeight: '38svh' } }),
-        // The label at the thumb: a definite size (the bike's 4:3, as wide as the screen allows under
-        // the same height cap), so the grid can centre it and nothing on the wall can resize it. On a
-        // small phone it also shrinks to leave the label's space and 16 px of wall above and below
-        // (cqh: the wall's height; the wall is a size container).
-        ...(thumb && {
-          p: '4px', maxHeight: 'none', width: `min(100%, 42svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)`,
-          [SHORT]: { maxHeight: 'none', width: `min(100%, 38svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)` },
+        /* Portrait: the whole wall is the bench, so the stage is just the bike, at a definite size
+           (the bike's 4:3, as wide as the screen allows under a height cap), so the wall's grid can
+           centre it and nothing on the wall can resize it. On a small phone it also shrinks to
+           leave the label's space and 16 px of wall above and below (cqh: the wall's height; the
+           wall is a size container). Short screens give a little more height to the build tray. */
+        ...(portrait && {
+          height: 'auto', aspectRatio: '4 / 3', p: '4px', borderRadius: 0, background: 'none', boxShadow: 'none',
+          width: `min(100%, 42svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)`,
+          [SHORT]: { width: `min(100%, 38svh * 4 / 3, (100cqh - ${THUMB_SLOT + 32}px) * 4 / 3)` },
         }),
-        '& .bx-card:not(:empty)': { animation: `bf-rise .5s ${motion.rise}` },
-        '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
       }}
     >
-      <ExplodedBike
-        progress={progress} bench zoomable centred={thumb} build={buildOn ? build : undefined}
-        cardHost={compact ? (thumb ? null : cardHost) : undefined} label={!compact && isEnabled('bikeLabel')} onSelect={onSelect}
-      />
+      <ExplodedBike progress={progress} bench zoomable centred={portrait} build={build} label={!compact} onSelect={onSelect} />
     </Box>
   );
 
@@ -266,15 +227,13 @@ export function ExploreBikePage() {
     <Box
       sx={{
         display: 'flex', alignItems: 'center', gap: '8px',
-        width: compact ? '100%' : buildOn ? 'min(680px, 100% - 32px)' : 'min(560px, 100% - 32px)', mx: 'auto', mt: compact ? 0 : '12px',
+        width: compact ? '100%' : 'min(680px, 100% - 32px)', mx: 'auto', mt: compact ? 0 : '12px',
       }}
     >
-      {buildOn && <BuildToggle open={open} onOpenChange={openTray} build={build} controls={trayId} opensDown={portrait && !docked} />}
-      {buildOn && (
-        <Box component="span" aria-live="polite" data-testid="build-live" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>
-          {said}
-        </Box>
-      )}
+      <BuildToggle open={open} onOpenChange={setOpen} build={build} controls={trayId} />
+      <Box component="span" aria-live="polite" data-testid="build-live" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>
+        {said}
+      </Box>
       <Button
         variant="quiet" onClick={toggle}
         aria-label={apart ? 'Put the bike back together' : 'Take the bike apart'}
@@ -283,66 +242,36 @@ export function ExploreBikePage() {
       >
         <Icon name={apart ? 'collapse' : 'expand'} />
       </Button>
-      {isEnabled('bikeCoil')
-        ? <CoilScrubber progress={progress} onChange={fromCoil} since={inviteSince} moved={scrubbed} />
-        : <ExplodeScrubber progress={progress} onChange={fromSlider} />}
+      <CoilScrubber progress={progress} onChange={fromCoil} since={inviteSince} moved={scrubbed} />
     </Box>
   );
 
-  const rotateInvite = (
+  const tray = <BuildTray build={build} onChange={change} open={open} id={trayId} fit={compact} />;
+
+  /* Phones, portrait and landscape alike: the part label (the desktop window: name and what it
+     is) waits in its own space and shows only while a part is picked; until then the hint sits
+     there. The build tray opens over the same space, and the label hides while it is open. */
+  const labelSlot = compact && (
     <Box
-      component="p" data-testid="rotate-invite"
+      data-testid="label-slot" data-hidden={open || undefined}
       sx={{
-        display: 'inline-flex', alignItems: 'center', gap: '8px', m: 0, p: '6px 12px', borderRadius: '8px',
-        background: 'var(--surface)', color: 'var(--ink-2)', fontSize: 13, fontWeight: 600, lineHeight: 1.4,
-        '& .ico': { fontSize: 20, color: 'var(--tone)' },
+        gridArea: '4 / 1', height: THUMB_SLOT, p: portrait ? '0 var(--gutter) 16px' : '0 0 16px', display: 'grid', alignItems: 'end',
+        '& > *': { gridArea: '1 / 1' }, ...(open && { visibility: 'hidden' }),
       }}
     >
-      <Icon name="rotate" />
-      Turn your phone sideways for a bigger bike.
+      <Typography
+        component="p" data-testid="part-hint" aria-hidden={selected ? true : undefined}
+        style={{ opacity: selected ? 0 : 1 }}
+        sx={{ m: 0, pb: '8px', textAlign: 'center', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.45, transition: 'opacity .2s ease', [`@media ${REDUCED}`]: { transition: 'none' } }}
+      >
+        {hint}
+      </Typography>
+      <PartLabel partKey={selected} build={build} className="bx-label--thumb" />
     </Box>
   );
-
-  const tray = buildOn && <BuildTray build={build} onChange={change} open={open} id={trayId} stacked={compact} inline={portrait} fit={docked} />;
-
-  // Phones: the panel holds the build tray, then the docked info card, or (with nothing
-  // selected) the hint and, in portrait on a touch screen, the invitation to turn the phone.
-  const panel = compact && (
-    <Box
-      data-testid="panel"
-      sx={{
-        minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
-        // Room for the card's window shadow inside the scroll box.
-        mx: '-8px', px: '8px', pb: '8px',
-        '& .bx-card': { position: 'static', width: 'auto', m: '12px 0 0', pointerEvents: 'auto' },
-        '& .bx-card:not(:empty)': { animation: `bf-rise .5s ${motion.rise}` },
-        '@keyframes bf-rise': { from: { opacity: 0, transform: 'translateY(10px)' }, to: { opacity: 1, transform: 'none' } },
-        [`@media ${REDUCED}`]: { '& .bx-card:not(:empty)': { animation: 'none' } },
-      }}
-    >
+  const traySlot = compact && (
+    <Box sx={{ gridArea: '3 / 1 / 5', alignSelf: 'end', minHeight: 0, maxHeight: '100%', display: 'flex', flexDirection: 'column', p: portrait ? '12px var(--gutter) 16px' : '12px 0 16px', pointerEvents: open ? undefined : 'none' }}>
       {tray}
-      <div ref={setCardHost} data-testid="card-slot" />
-      {!selected && (
-        <Box sx={{ display: 'grid', justifyItems: land ? 'start' : 'center', gap: '16px', pt: land ? '12px' : '24px', textAlign: land ? 'left' : 'center', '& > div': { justifyItems: land ? 'start' : 'center' } }}>
-          {cue}
-          {portrait && coarse && rotateInvite}
-        </Box>
-      )}
-    </Box>
-  );
-
-  const dock = docked && (
-    <Box
-      data-testid="dock"
-      sx={{
-        // Stays at the bottom of the screen, always the same height: the build tray opens in
-        // the drawer's space above it, so it can never push the bike or the drawer's tab.
-        background: 'var(--bg)', borderTop: '1px solid var(--rule)',
-        p: '0 var(--gutter) calc(12px + env(safe-area-inset-bottom))',
-        '& > :last-child': { mt: '12px' },
-      }}
-    >
-      {controls}
     </Box>
   );
 
@@ -369,13 +298,9 @@ export function ExploreBikePage() {
               gridTemplateRows: 'auto minmax(0, 1fr) auto auto', p: 'calc(var(--head-h) + 32px) 0 24px',
               [`@media ${REDUCED}`]: { position: 'relative', height: 'auto', minHeight: '100vh', pt: '32px' },
             }),
-            ...(docked && { gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
-            ...(portrait && !docked && {
-              gridTemplateRows: 'auto auto auto minmax(0, 1fr)', rowGap: '16px', alignContent: 'start',
-              p: 'calc(var(--head-h) + 24px) var(--gutter) 0', width: 'min(560px, 100%)', mx: 'auto',
-            }),
+            ...(portrait && { gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'auto minmax(0, 1fr) auto', pt: 'var(--head-h)', background: 'var(--bg)' }),
             ...(land && {
-              gridTemplateColumns: 'minmax(0, 1fr) minmax(240px, 34%)', gridTemplateRows: 'minmax(0, 1fr) auto', gap: '12px 20px',
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 38%)', gridTemplateRows: 'minmax(0, 1fr) auto', gap: '12px 20px',
               p: 'calc(var(--head-h) + 12px) max(var(--gutter), env(safe-area-inset-right)) 12px max(var(--gutter), env(safe-area-inset-left))',
             }),
           }}
@@ -383,13 +308,13 @@ export function ExploreBikePage() {
           {!compact && (
             <>
               <Wrap
-                ref={headRef} data-testid="bike-head" data-tuck={tuck || undefined}
+                ref={headRef} data-testid="bike-head" data-tuck={scrolls || undefined}
                 sx={{
                   textAlign: 'center',
-                  /* bikeTuck: the heading rides up with the top of the bench wall and fades under the
-                     header, while its row collapses so the wall takes its space. The stage's margin
-                     does the last 40 px, so the wall ends 16 px under the header. */
-                  ...(tuck && {
+                  /* The heading rides up with the top of the bench wall and fades under the header,
+                     while its row collapses so the wall takes its space. The stage's margin does the
+                     last 40 px, so the wall ends 16 px under the header. */
+                  ...(scrolls && {
                     '--tuck-by': 'calc(var(--tuck, 0) * (var(--head-size, 0px) + 40px))',
                     mb: 'calc(-1 * var(--tuck, 0) * var(--head-size, 0px))', transform: 'translateY(calc(-1 * var(--tuck-by)))',
                     opacity: 'calc(1 - 1.25 * var(--tuck, 0))', willChange: 'transform, opacity',
@@ -403,26 +328,7 @@ export function ExploreBikePage() {
               {controls}
             </>
           )}
-          {drawer && (
-            <>
-              <Box sx={{ textAlign: 'center', p: '24px var(--gutter) 20px' }}>{title}</Box>
-              {/* The bench wall: from under the title to the dock. */}
-              <Box sx={{ display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', minHeight: 0, background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}>
-                {stage}
-                {/* Between the bike and the dock: the build tray (scrolling inside if it can't fit),
-                    then the drawer. They never open together, and the drawer's tab always shows. */}
-                <Box data-testid="drawer-space" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: open ? '8px' : 0, minHeight: 0, pt: '12px', '& > *': { minHeight: 0 } }}>
-                  {tray && <Box sx={{ flex: '0 1 auto', display: 'flex', flexDirection: 'column', px: 'var(--gutter)', ...(open && { [SHORT]: { pb: '12px' } }) }}>{tray}</Box>}
-                  {/* On short screens the open tray takes the drawer's tab's room too; the tab returns when it closes. */}
-                  <Box data-testid="drawer-slot" sx={{ flex: drawerOpen ? '0 1 auto' : 'none', display: 'grid', ...(open && { [SHORT]: { display: 'none' } }) }}>
-                    <PartDrawer partKey={selected} build={buildOn ? build : undefined} open={drawerOpen} onOpenChange={openDrawer} hostRef={setCardHost} />
-                  </Box>
-                </Box>
-              </Box>
-              {dock}
-            </>
-          )}
-          {thumb && (
+          {portrait && (
             <>
               <Box sx={{ textAlign: 'center', p: '24px var(--gutter) 20px' }}>{title}</Box>
               {/* The bench wall, from under the title to the dock: equal space above and below the
@@ -434,46 +340,35 @@ export function ExploreBikePage() {
                 sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr) auto', minHeight: 0, containerType: 'size', background: benchWall, boxShadow: 'inset 0 1px 0 var(--bench-line)' }}
               >
                 <Box sx={{ gridArea: '2 / 1', minHeight: 0 }}>{stage}</Box>
-                <Box
-                  data-testid="label-slot" data-hidden={open || undefined}
-                  sx={{
-                    gridArea: '4 / 1', height: THUMB_SLOT, p: '0 var(--gutter) 16px', display: 'grid', alignItems: 'end',
-                    '& > *': { gridArea: '1 / 1' }, ...(open && { visibility: 'hidden' }),
-                  }}
-                >
-                  <Typography
-                    component="p" data-testid="part-hint" aria-hidden={selected ? true : undefined}
-                    style={{ opacity: selected ? 0 : 1 }}
-                    sx={{ m: 0, pb: '8px', textAlign: 'center', color: 'var(--ink-2)', fontSize: 15, lineHeight: 1.45, transition: 'opacity .2s ease', [`@media ${REDUCED}`]: { transition: 'none' } }}
-                  >
-                    {hint}
-                  </Typography>
-                  <PartLabel partKey={selected} build={buildOn ? build : undefined} className="bx-label--thumb" />
-                </Box>
-                {tray && (
-                  <Box sx={{ gridArea: '3 / 1 / 5', alignSelf: 'end', minHeight: 0, maxHeight: '100%', display: 'flex', flexDirection: 'column', p: '12px var(--gutter) 16px', pointerEvents: open ? undefined : 'none' }}>
-                    {tray}
-                  </Box>
-                )}
+                {labelSlot}
+                {traySlot}
               </Box>
-              {dock}
-            </>
-          )}
-          {portrait && !docked && (
-            <>
-              <Box sx={{ textAlign: 'center' }}>{title}</Box>
-              {stage}
-              {controls}
-              {panel}
+              <Box
+                data-testid="dock"
+                sx={{
+                  // Stays at the bottom of the screen, always the same height: the build tray opens
+                  // on the wall above it, so it can never push the bike.
+                  background: 'var(--bg)', borderTop: '1px solid var(--rule)',
+                  p: '0 var(--gutter) calc(12px + env(safe-area-inset-bottom))',
+                  '& > :last-child': { mt: '12px' },
+                }}
+              >
+                {controls}
+              </Box>
             </>
           )}
           {land && (
             <>
               <Box sx={{ gridColumn: 1, gridRow: 1, minHeight: 0 }}>{stage}</Box>
               <Box sx={{ gridColumn: 1, gridRow: 2 }}>{controls}</Box>
-              <Box sx={{ gridColumn: 2, gridRow: '1 / span 2', minHeight: 0, display: 'grid', gridTemplateRows: 'auto minmax(0, 1fr)', alignContent: 'start' }}>
-                {title}
-                {panel}
+              {/* The title, then the same label and tray as portrait, at the foot of the column. */}
+              <Box
+                data-testid="side"
+                sx={{ gridColumn: 2, gridRow: '1 / span 2', minHeight: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gridTemplateRows: 'auto 0 minmax(0, 1fr) auto' }}
+              >
+                <Box sx={{ gridArea: '1 / 1' }}>{title}</Box>
+                {labelSlot}
+                {traySlot}
               </Box>
             </>
           )}
