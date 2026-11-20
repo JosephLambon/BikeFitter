@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from './test/renderApp';
 
-describe('app routes and the exploreBike flag', () => {
-  it('flag on: serves Explore the bike, links it from the nav, and sends the home page there', async () => {
-    const { router } = renderApp('/', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+describe('app routes', () => {
+  it('serves Explore the bike, links it from the nav, and sends the home page there', async () => {
+    const { router } = renderApp('/');
     expect(await screen.findByRole('heading', { level: 1, name: 'Explore your bike’s anatomy.' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/bike');
     const nav = screen.getByRole('navigation', { name: 'Main' });
@@ -15,19 +15,13 @@ describe('app routes and the exploreBike flag', () => {
     expect(link).toHaveTextContent(/^Explore$/);
   });
 
-  it('flag off: the page does not exist and the nav does not offer it', () => {
-    renderApp('/bike', { exploreBike: false, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+  it('sends unknown paths to Page not found', () => {
+    renderApp('/nowhere');
     expect(screen.getByRole('heading', { level: 1, name: 'Page not found.' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Explore the bike' })).not.toBeInTheDocument();
-  });
-
-  it('flag off: the home page stays a holding page', () => {
-    renderApp('/', { exploreBike: false, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
-    expect(screen.getByRole('heading', { level: 1, name: 'BikeFitter' })).toBeInTheDocument();
   });
 
   it('switches between light and dark from the header', async () => {
-    renderApp('/bike', { exploreBike: true, bikeBuild: false, bikeDrawer: false, bikeCoil: false, bikeLabel: false, bikeTuck: false, bikeThumbLabel: false });
+    renderApp('/bike');
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));

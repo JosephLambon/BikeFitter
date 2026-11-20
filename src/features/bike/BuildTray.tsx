@@ -7,7 +7,7 @@ import Box from '@mui/material/Box';
 import { Icon } from '../../components/Icon';
 import { Segmented } from '../../components/Segmented';
 import { motion } from '../../theme/tokens';
-import { SCRUBBER_H } from './ExplodeScrubber';
+import { SCRUBBER_H } from './scrubber';
 import { BUILD_OPTIONS, DEFAULT_BUILD, changedKeys, type Build, type BuildKey } from './build';
 
 export interface BuildTrayProps {
@@ -16,18 +16,18 @@ export interface BuildTrayProps {
   open: boolean;
   /** The id the toggle's aria-controls points at. */
   id: string;
-  /** One card per row at any width, filling its container (the phone panel). */
-  stacked?: boolean;
-  /** With `stacked`: label beside its control (a wide panel), not above it (a narrow column). */
-  inline?: boolean;
-  /** Fills a bounded slot (the portrait phone layout): sits in a window and scrolls inside it. */
+  /** Fills a bounded slot (the phone layouts): one dense card per option, in a window that
+      scrolls inside the slot. */
   fit?: boolean;
+  /** With `fit`: each label beside its control (portrait, where the slot is wide), not above it
+      (landscape's narrow side column, where the switch needs the whole width). */
+  beside?: boolean;
 }
 
 const REDUCED = '@media (prefers-reduced-motion: reduce)';
 
 /** Opens and closes the tray. Shows how many options differ from the standard build. */
-export function BuildToggle({ open, onOpenChange, build, controls, opensDown = false }: { open: boolean; onOpenChange: (open: boolean) => void; build: Build; controls: string; /** The tray sits below the button (portrait phones). */ opensDown?: boolean }) {
+export function BuildToggle({ open, onOpenChange, build, controls }: { open: boolean; onOpenChange: (open: boolean) => void; build: Build; controls: string }) {
   const n = changedKeys(DEFAULT_BUILD, build).length;
   return (
     <Box
@@ -39,7 +39,7 @@ export function BuildToggle({ open, onOpenChange, build, controls, opensDown = f
         '@media (hover: hover)': { '&:hover': { background: 'var(--rule)' } },
         '&:focus-visible': { outline: '2px solid var(--tone)', outlineOffset: '2px' },
         '& .ico': { fontSize: 20 },
-        '& .bt-chev': { color: 'var(--ink-3)', transform: open !== opensDown ? 'none' : 'rotate(180deg)', transition: `transform .35s ${motion.rise}` },
+        '& .bt-chev': { color: 'var(--ink-3)', transform: open ? 'none' : 'rotate(180deg)', transition: `transform .35s ${motion.rise}` },
         [REDUCED]: { '& .bt-chev': { transition: 'none' } },
         '@media (max-width: 760px)': { px: '14px', '& .bt-word': { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' } },
       }}
@@ -63,15 +63,14 @@ export function BuildToggle({ open, onOpenChange, build, controls, opensDown = f
   );
 }
 
-export function BuildTray({ build, onChange, open, id, stacked = false, inline = false, fit = false }: BuildTrayProps) {
-  const row = { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center', p: '8px' };
+export function BuildTray({ build, onChange, open, id, fit = false, beside = false }: BuildTrayProps) {
   return (
     <Box
       id={id} data-open={open} inert={!open} data-testid="build-tray"
       sx={{
         // Grid rows 0fr ↔ 1fr animate the height; a fade and a small rise go with it.
         display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(8px)',
-        width: stacked ? '100%' : 'min(1120px, 100% - 32px)', mx: 'auto',
+        width: fit ? '100%' : 'min(1120px, 100% - 32px)', mx: 'auto',
         // In a bounded slot: a window no taller than the slot; the options scroll inside it.
         ...(fit && { minHeight: 0, maxHeight: '100%', borderRadius: '12px', background: 'var(--bg)', boxShadow: '0 0 0 1px var(--rule), var(--shadow)', p: open ? '4px' : 0 }),
         transition: `grid-template-rows .45s ${motion.rise}, opacity .3s ease, transform .45s ${motion.rise}`,
@@ -84,8 +83,8 @@ export function BuildTray({ build, onChange, open, id, stacked = false, inline =
             display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '8px', pt: fit ? 0 : '12px',
             // Tablets: three cards over two, both rows full width.
             '@media (max-width: 980px)': { gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', '& > *': { gridColumn: 'span 2' }, '& > :nth-of-type(n+4)': { gridColumn: 'span 3' } },
-            '@media (max-width: 760px)': { gridTemplateColumns: '1fr', gap: '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } },
-            ...(stacked && { '&&': { gridTemplateColumns: '1fr', gap: fit ? '4px' : '6px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } } }),
+            // Phones (always `fit`): one card per row.
+            ...(fit && { '&&': { gridTemplateColumns: '1fr', gap: '4px', '& > *, & > :nth-of-type(n+4)': { gridColumn: 'auto' } } }),
           }}
         >
           {BUILD_OPTIONS.map((o) => {
@@ -96,13 +95,11 @@ export function BuildTray({ build, onChange, open, id, stacked = false, inline =
                 sx={{
                   // Shelf card: --surface, 14 px radius, equal padding on every side.
                   display: 'grid', gap: '8px', p: '12px', borderRadius: '14px', background: 'var(--surface)',
-                  '@media (max-width: 760px)': row,
-                  ...(stacked && { '&&': inline ? row : { gridTemplateColumns: '1fr', p: '12px' } }),
-                  // A tight slot: denser rows, so more options show before it scrolls.
-                  ...(fit && { '&&&': { p: '4px 4px 4px 8px', borderRadius: '10px' } }),
+                  // A tight slot: denser cards, so more options show before it scrolls.
+                  ...(fit && { '&&': { gap: beside ? '8px' : '4px', p: beside ? '4px 4px 4px 8px' : '8px 4px 4px', borderRadius: '10px', ...(beside && { gridTemplateColumns: '88px minmax(0, 1fr)', alignItems: 'center' }) } }),
                 }}
               >
-                <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', '@media (max-width: 760px)': { pl: '6px' }, ...(stacked && { '&&': { pl: inline ? '6px' : 0 } }) }}>
+                <Box component="span" id={labelId} sx={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', ...(fit && { '&&': { pl: '6px' } }) }}>
                   {o.label}
                   {build[o.key] !== DEFAULT_BUILD[o.key] && <Box component="span" aria-hidden="true" sx={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--tone)' }} />}
                 </Box>

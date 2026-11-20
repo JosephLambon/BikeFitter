@@ -1,9 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router';
 import { AppShell } from './components/AppShell';
 import type { SourceId } from './content/sources';
-import { isEnabled } from './flags';
 import { ExploreBikePage } from './pages/ExploreBikePage';
-import { HomePlaceholder } from './pages/HomePlaceholder';
 import { NotFound } from './pages/NotFound';
 
 /** Route metadata read by the shell. */
@@ -12,25 +10,22 @@ export interface RouteHandle {
   sources?: SourceId[];
 }
 
-/** The app's routes. Read at call time, so the feature flags can be flipped in tests. */
+/** The app's routes. Explore the bike is the only tool so far, so the home page sends you there. */
 export function routes(): RouteObject[] {
-  const bike = isEnabled('exploreBike');
   return [
     {
       element: <AppShell />,
       children: [
-        { index: true, element: bike ? <Navigate to="/bike" replace /> : <HomePlaceholder /> },
-        ...(bike ? [{ path: 'bike', element: <ExploreBikePage />, handle: { sources: ['cyclefit-cleats', 'empfield-stack-reach', 'hogg-height'] } satisfies RouteHandle }] : []),
+        { index: true, element: <Navigate to="/bike" replace /> },
+        { path: 'bike', element: <ExploreBikePage />, handle: { sources: ['cyclefit-cleats', 'empfield-stack-reach', 'hogg-height'] } satisfies RouteHandle },
         { path: '*', element: <NotFound /> },
       ],
     },
   ];
 }
 
-/** The tools in the main nav, in Workstand order, once each one is switched on.
+/** The tools in the main nav, in Workstand order.
     `short` is the label the nav shows on every screen; `label` is the link's accessible name. */
 export function navTools() {
-  return [
-    ...(isEnabled('exploreBike') ? [{ pillar: 'bike' as const, to: '/bike', label: 'Explore the bike', short: 'Explore' }] : []),
-  ];
+  return [{ pillar: 'bike' as const, to: '/bike', label: 'Explore the bike', short: 'Explore' }];
 }

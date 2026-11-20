@@ -55,9 +55,6 @@
 }
 .bx-part.is-active > .bx-lift { filter: var(--bx-lift); }
 
-/* Info card: floats beside the part, or docks in the page's card host on phones */
-.bx-card { position: absolute; z-index: 2; width: min(300px, 90%); pointer-events: none; }
-.bx-card a { pointer-events: auto; }
 
 /* Part label (ExplodedBike `label`): a fixed band above the drawing, so the bike never moves and the
    words never cover it. In it, a white window with a 1 px Bike-amber hairline and the window shadow,
@@ -76,9 +73,11 @@
 .bx-label-win > * { animation: bx-label-in .28s cubic-bezier(.2, .8, .2, 1) both; }
 .bx-label-win > .bx-label-what { animation-delay: .04s; }
 @keyframes bx-label-in { from { opacity: 0; transform: translateY(3px); } }
-/* Portrait phones (bikeThumbLabel): the same window, full width, in its slot just above the dock. */
-.bx-label.bx-label--thumb { height: auto; padding: 0; display: block; }
-.bx-label--thumb .bx-label-win { width: 100%; display: flex; flex-direction: column; justify-content: center; padding: 12px 16px; }
+/* Phones, portrait and landscape: the same window, full width, in its own slot (above the dock in portrait, at the foot of the side column in landscape). */
+.bx-label.bx-label--phone { height: auto; padding: 0; display: block; }
+/* At least 104 px; a long description in landscape's narrow column grows the window upwards
+   rather than squeezing its padding. */
+.bx-label--phone .bx-label-win { width: 100%; height: auto; min-height: 104px; display: flex; flex-direction: column; justify-content: center; padding: 12px 16px; }
 @media (prefers-reduced-motion: reduce) { .bx-label-win, .bx-label-win[data-shown="false"] { transition: none; transform: none; } .bx-label-win > * { animation: none; } }
 
 @media (prefers-reduced-motion: reduce) {
