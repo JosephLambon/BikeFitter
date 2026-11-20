@@ -1,0 +1,108 @@
+/* Exploded bike drawing. Ported from designs/shared/bike.css. Theme it only through the --bx-*
+   tokens (src/theme/tokens.ts); never change the geometry for styling. */
+.bx { position: relative; }
+.bx-stage { position: relative; width: 100%; height: 100%; }
+.bx-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.bx [class^="m-"], .bx [class*=" m-"] { stroke: var(--bx-outline); stroke-width: var(--bx-outline-w); vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.bx .hl { stroke: none; }
+.bx .m-frame { fill: var(--bx-frame); }   .bx .m-frame-hi { fill: var(--bx-frame-hi); }
+.bx .m-dark { fill: var(--bx-dark); }     .bx .m-dark-hi { fill: var(--bx-dark-hi); }
+.bx .m-metal { fill: var(--bx-metal); }   .bx .m-metal-hi { fill: var(--bx-metal-hi); }
+.bx .m-hole { fill: var(--bx-hole); }
+.bx .m-spoke { fill: none; stroke: var(--bx-spoke); stroke-width: 2.2; vector-effect: none; }
+.bx .o { fill: none; stroke: var(--bx-outline); stroke-linecap: round; stroke-linejoin: round; }
+.bx [class^="t-"] { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.bx .t-dark { stroke: var(--bx-dark); } .bx .t-metal { stroke: var(--bx-metal); }
+.bx .t-wire { stroke: var(--bx-wire); } .bx .t-chain { stroke: var(--bx-chain); }
+.bx .links { fill: none; stroke: var(--bx-chain-hi); }
+.bx .wrap { fill: none; stroke: var(--bx-dark-hi); }
+.bx .teeth { fill: none; stroke: var(--bx-teeth); }
+.bx .hit { fill: transparent; stroke: none; }
+.bx .bx-shadow { fill: var(--bx-shadow); }
+.bx .bx-groundline { stroke: var(--bx-ground); stroke-width: 1px; vector-effect: non-scaling-stroke; fill: none; }
+.bx-ground { transition: opacity .2s linear; }
+.bx-bench { pointer-events: none; }
+.bx .bx-bench-top { fill: var(--bx-bench-top); stroke: var(--bx-bench-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.bx .bx-bench-front { fill: var(--bx-bench-front); stroke: var(--bx-bench-line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+
+/* Materials: tan-wall tyres and honey leather saddle and bar tape (alloy is --bx-metal).
+   :where() keeps these weaker than selection, so other parts still ghost when one is selected. */
+:where(.bx) .bx-part:where([data-part="tyre"]):not(.is-active) { --bx-dark: var(--bx-tyre); --bx-dark-hi: var(--bx-tyre-hi); }
+:where(.bx) .bx-part:where([data-part="saddle"], [data-part="tape"]):not(.is-active) { --bx-dark: var(--bx-leather); --bx-dark-hi: var(--bx-leather-hi); }
+
+/* Selection: the selected part goes amber; everything else ghosts */
+.bx-part { transition: opacity .25s ease; }
+.bx--interactive .bx-part { cursor: pointer; }
+.bx--interactive .bx-part:focus { outline: none; }
+.bx.has-active .bx-part:not(.is-active) {
+  opacity: var(--bx-dim);
+  --bx-frame: var(--bx-ghost); --bx-frame-hi: var(--bx-ghost-hi);
+  --bx-dark: var(--bx-ghost); --bx-dark-hi: var(--bx-ghost-hi);
+  --bx-metal: var(--bx-ghost); --bx-metal-hi: var(--bx-ghost-hi);
+  --bx-spoke: var(--bx-ghost-line); --bx-wire: var(--bx-ghost-line); --bx-teeth: var(--bx-ghost-line);
+  --bx-chain: var(--bx-ghost); --bx-chain-hi: var(--bx-ghost-hi);
+  --bx-outline: var(--bx-ghost-outline);
+}
+.bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: fill .2s ease, stroke .2s ease; }
+.bx-part.is-active {
+  --bx-frame: var(--bx-active-fill); --bx-frame-hi: var(--bx-active-fill-hi);
+  --bx-dark: var(--bx-active-fill); --bx-dark-hi: var(--bx-active-fill-hi);
+  --bx-metal: var(--bx-active-fill); --bx-metal-hi: var(--bx-active-fill-hi);
+  --bx-spoke: var(--bx-active-line); --bx-wire: var(--bx-active-line); --bx-teeth: var(--bx-active-line);
+  --bx-chain: var(--bx-active-fill); --bx-chain-hi: var(--bx-active-fill-hi);
+  --bx-outline: var(--bx-active-line);
+}
+.bx-part.is-active > .bx-lift { filter: var(--bx-lift); }
+
+
+/* Part label (ExplodedBike `label`): a fixed band above the drawing, so the bike never moves and the
+   words never cover it. In it, a white window with a 1 px Bike-amber hairline and the window shadow,
+   that shows only while a part is hovered or picked. It keeps one size for every part (two lines of
+   description fit) and fades out with its last words when the selection clears. */
+.bx.bx--label { display: flex; flex-direction: column; }
+.bx.bx--label > .bx-stage { flex: 1; min-height: 0; height: auto; }
+.bx-label { flex: none; height: 128px; padding: 4px 16px 0; display: flex; justify-content: center; align-items: flex-start; pointer-events: none; }
+.bx-label-win { width: min(460px, 100%); height: 104px; padding: 16px 22px; border-radius: 12px; text-align: center;
+  background: var(--bg); box-shadow: inset 0 0 0 1px var(--bike), var(--shadow);
+  transition: opacity .2s ease, transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.bx-label-win[data-shown="false"] { opacity: 0; visibility: hidden; transform: translateY(4px) scale(.98);
+  transition: opacity .2s ease, transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s .3s; }
+.bx-label-name { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.3; color: var(--ink); }
+.bx-label-what { margin: 4px 0 0; font-size: 15px; line-height: 1.5; color: var(--ink); text-wrap: balance; }
+.bx-label-win > * { animation: bx-label-in .28s cubic-bezier(.2, .8, .2, 1) both; }
+.bx-label-win > .bx-label-what { animation-delay: .04s; }
+@keyframes bx-label-in { from { opacity: 0; transform: translateY(3px); } }
+/* Phones, portrait and landscape: the same window, full width, in its own slot (above the dock in portrait, at the foot of the side column in landscape). */
+.bx-label.bx-label--phone { height: auto; padding: 0; display: block; }
+/* At least 104 px; a long description in landscape's narrow column grows the window upwards
+   rather than squeezing its padding. */
+.bx-label--phone .bx-label-win { width: 100%; height: auto; min-height: 104px; display: flex; flex-direction: column; justify-content: center; padding: 12px 16px; }
+@media (prefers-reduced-motion: reduce) { .bx-label-win, .bx-label-win[data-shown="false"] { transition: none; transform: none; } .bx-label-win > * { animation: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bx-part, .bx-ground, .bx [class^="m-"], .bx [class*=" m-"], .bx .o, .bx [class^="t-"], .bx .teeth, .bx .links, .bx .wrap { transition: none; }
+}
+
+/* Build swaps (ExplodedBike `build`): leaving parts can't be picked; electronic shifts ring out
+   from the lever and the mechs once. */
+.bx-part.is-leaving { pointer-events: none; }
+.bx .bx-pulse { fill: none; stroke: var(--bike); stroke-width: 2px; vector-effect: non-scaling-stroke; opacity: 0;
+  transform-box: fill-box; transform-origin: center; animation: bx-pulse .9s cubic-bezier(.2, .8, .2, 1) both; pointer-events: none; }
+@keyframes bx-pulse { from { opacity: .9; transform: scale(.25); } to { opacity: 0; transform: scale(1.5); } }
+@media (prefers-reduced-motion: reduce) { .bx-pulses { display: none; } }
+
+/* A build change while apart: parts glide to their new places in the exploded layout. */
+.bx--relayout .bx-part { transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .25s ease; }
+
+/* Zoom (zoomable): the drawing zooms on its own. A chip brings it back to the whole bike. */
+.bx-zoom-reset { position: absolute; right: 12px; bottom: 12px; z-index: 2; height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: var(--bg); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); font: 600 13px/1 var(--f-text); cursor: pointer;
+  animation: bx-chip-in .3s cubic-bezier(.2, .8, .2, 1); }
+.bx-zoom-reset:focus-visible { outline: 2px solid var(--bike); outline-offset: 2px; }
+@keyframes bx-chip-in { from { opacity: 0; transform: translateY(6px); } }
+/* Zoomed: drag the drawing by hand (mouse and pen; fingers pan too). */
+.bx.is-zoomed .bx-svg, .bx.is-zoomed .bx-part { cursor: grab; }
+.bx .bx-svg.is-dragging, .bx .bx-svg.is-dragging .bx-part { cursor: grabbing; }
+.bx-svg { user-select: none; -webkit-user-select: none; }
+@media (prefers-reduced-motion: reduce) { .bx--relayout .bx-part { transition: none; } .bx-zoom-reset { animation: none; } }

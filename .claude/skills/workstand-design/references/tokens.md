@@ -43,9 +43,9 @@ Light `--fit` and `--bike` were darkened on 6 November 2026 (from `#13834a` and 
 | Token or value | Use |
 |---|---|
 | Radius 20 px (16 px at ≤ 760 px) | Pegboard panels: hero figure, `.figure`, `.result`, `.takeaway`, `.next` |
-| Radius 14 px | Cards, the bike host window, fit question card, info card, evidence, levels, facts |
+| Radius 14 px | Cards, the bike host window, fit question card, evidence, levels, facts |
 | Radius 12 px | Windows (12 12 0 0 when they sit on a pegboard's bottom edge), fields, pager |
-| Radius 10 px | Buttons, `.more`, nav links, icon buttons, the fit box inside the info card |
+| Radius 10 px | Buttons, `.more`, nav links, icon buttons |
 | Radius 8 px | Chips, tags, the brand mark, number badges |
 | Radius 6–7 px | Inline badges: `kbd`, mini-list numbers, explode percentage, lesson numbers, focus ring |
 | `--shadow` light | `0 1px 2px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.09)`, windows only |
@@ -78,7 +78,7 @@ In the prototypes, all six families load from the Workstand Google Fonts link. I
 |---|---|---|
 | `--bx-frame` / `-hi` | `#ffffff` / `#f0f0ec` | `#232323` / `#2f2f2f` |
 | `--bx-dark` / `-hi` | `#f4f4f1` / `#e6e6e1` | `#1b1b1b` / `#2a2a2a` |
-| `--bx-metal` / `-hi` | `#fafaf8` / `#eaeae5` | `#262626` / `#333333` |
+| `--bx-metal` / `-hi` | `#e2e5e7` / `#c3c8cc` | `#3b3e41` / `#4c5054` |
 | `--bx-spoke` | `rgba(26,26,25,.28)` | `rgba(237,237,234,.28)` |
 | `--bx-wire` | `rgba(26,26,25,.78)` | `rgba(237,237,234,.75)` |
 | `--bx-teeth` | `rgba(26,26,25,.5)` | `rgba(237,237,234,.5)` |
@@ -93,6 +93,21 @@ In the prototypes, all six families load from the Workstand Google Fonts link. I
 | `--bx-ground` | `rgba(26,26,25,.16)` | `rgba(237,237,234,.14)` |
 | `--bx-dim-line` | `var(--ink-2)` | `var(--ink-2)` |
 | `--bx-lift` | `drop-shadow(0 6px 10px rgba(0,0,0,.14))` | `drop-shadow(0 6px 12px rgba(0,0,0,.5))` |
+| `--bx-tyre` / `--bx-tyre-hi` | `#dcc29d` / `#b48d5a` | `#8c7050` / `#a98a62` |
+| `--bx-leather` / `--bx-leather-hi` | `#b98a55` / `#d2a876` | `#86613a` / `#a47b4d` |
+| `--bx-bench-top` | `var(--bg)` | `var(--surface-2)` |
+| `--bx-bench-front` | `var(--surface-2)` | `var(--surface)` |
+| `--bx-bench-line` | `rgba(26,26,25,.16)` | `rgba(237,237,234,.14)` |
+
+Tyres use `--bx-tyre`; the saddle and bar tape use `--bx-leather` (both via `:where()` rules, so selection still wins). `--bx-metal` is polished alloy.
+
+**Bench wall** (the stage behind the bike on Explore the bike; custom properties on `:root`, gradient written at the element as `benchWall`):
+
+| Token | Light | Dark |
+|---|---|---|
+| `--bench-wall` | `#ffffff` | `#2d2012` (= `--bike-tint`) |
+| `--bench-dot` | `#ecc89a` (1.4 px dots on a 22 px grid) | `#5a3e1d` (= `--bike-dot`) |
+| `--bench-line` | `#e6e6e1` (1 px inset edge) | `transparent` |
 
 ## Contrast (WCAG 2.1, checked 6 November 2026)
 
